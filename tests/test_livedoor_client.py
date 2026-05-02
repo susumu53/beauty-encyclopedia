@@ -48,5 +48,32 @@ class TestLivedoorClient(unittest.TestCase):
         self.assertIn('Sample Content', payload)
         self.assertIn('<![CDATA[', payload)
 
+    @patch('requests.post')
+    def test_post_article_with_category_and_draft(self, mock_post):
+        """categoryとdraftオプションが正しくXMLに反映されるかテスト"""
+        mock_response = MagicMock()
+        mock_response.text = "success"
+        mock_response.raise_for_status = MagicMock()
+        mock_post.return_value = mock_response
+
+        self.client.post_article(
+            "Title", 
+            "Content", 
+            category="SNS美女", 
+            draft=True
+        )
+
+        mock_post.assert_called_once()
+        args, kwargs = mock_post.call_args
+        payload = kwargs['data'].decode('utf-8')
+        
+        # カテゴリの確認
+        self.assertIn('term="SNS美女"', payload)
+        self.assertIn(f'scheme="http://livedoor.blogcms.jp/blog/test_blog/category"', payload)
+        
+        # 下書き設定の確認
+        self.assertIn('<app:draft>yes</app:draft>', payload)
+        self.assertIn('xmlns:app="http://www.w3.org/2007/app"', payload)
+
 if __name__ == '__main__':
     unittest.main()

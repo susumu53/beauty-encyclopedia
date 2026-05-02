@@ -19,14 +19,22 @@ def scrape_bi_girl_page(page_num):
         try:
             name_el   = card.select_one('.all_tweet_profile_name')
             id_el     = card.select_one('.all_tweet_profile_screenName')
+            # メイン画像は .img_a の中にある。最初の img だとアイコンになる場合がある
+            img_el    = card.select_one('.img_a img')
             tweet_link_el = card.find('a', href=lambda h: h and 'x.com' in h and '/status/' in h)
             
             if name_el and id_el and tweet_link_el:
                 raw_id = id_el.text.strip().lstrip('@')
+                # lazyloadされている場合は data-src にURLがある
+                image_url = None
+                if img_el:
+                    image_url = img_el.get('data-src') or img_el.get('src')
+                
                 results.append({
                     "name": name_el.text.strip(),
                     "id":   raw_id,
-                    "url":  tweet_link_el['href']
+                    "url":  tweet_link_el['href'],
+                    "image_url": image_url
                 })
         except Exception as e:
             print(f"Error parsing card: {e}")

@@ -3,17 +3,22 @@ import os
 from livedoor_client import LivedoorClient
 from scraper import scrape_bi_girl_page
 
-def process_posts():
+import argparse
+
+def process_posts(dry_run=False):
     # 設定の読み込み
-    LD_ID = os.getenv("LIVEDOOR_ID")
+    LD_ID = os.getenv("LIVEDOOR_ID", "ranking000")
     API_KEY = os.getenv("LIVEDOOR_API_KEY")
     BLOG_ID = os.getenv("LIVEDOOR_BLOG_ID", "ranking000-w6crxelo")
+    CATEGORY = os.getenv("LIVEDOOR_CATEGORY")
     
-    if not LD_ID or not API_KEY:
-        print("LIVEDOOR_ID or LIVEDOOR_API_KEY not set.")
-        return
+    if not dry_run and (not LD_ID or not API_KEY):
+        print("LIVEDOOR_ID or LIVEDOOR_API_KEY not set. Skipping real post.")
+        if not API_KEY:
+            print("Hint: API_KEY (AtomPub API Key) is required for real posting.")
+        dry_run = True
 
-    client = LivedoorClient(LD_ID, API_KEY, BLOG_ID)
+    client = LivedoorClient(LD_ID, API_KEY, BLOG_ID) if LD_ID and API_KEY else None
     
     # 状態（ページ番号）の読み込み
     state_path = 'state.json'
@@ -40,7 +45,6 @@ def process_posts():
         print(f"Failed to scrape page {current_page}: {e}")
         return
 
-    count = 0
     posted_this_run = 0
     for item in items:
         if posted_this_run >= 5:
@@ -50,37 +54,51 @@ def process_posts():
         if item['id'] in history:
             continue
         
-        print(f"Posting: {item['name']} (@{item['id']})")
+        print(f"Processing: {item['name']} (@{item['id']})")
         title = f"ネットで見つけた美女 {item['name']} (@{item['id']})"
-        # Xポストの埋め込みHTML (簡易版)
+        # Xポストの埋め込みHTML (簡易版) と 画像
+        image_html = f'<p><img src="{item["image_url"]}" style="max-width: 100%;"></p>' if item.get('image_url') else ""
         content = f"""
         <p>アカウント名：{item['name']}</p>
         <p>X ID：@{item['id']}</p>
+        {image_html}
         <p><a href="{item['url']}">{item['url']}</a></p>
         <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
         """
         
-        try:
-            client.post_article(title, content)
-            history.add(item['id'])
+        if dry_run:
+            print(f"--- [DRY RUN] ---")
+            print(f"Title: {title}")
+            print(f"Category: {CATEGORY}")
+            print(f"Content: {content[:200]}...")
+            print(f"-----------------")
             posted_this_run += 1
-        except Exception as e:
-            print(f"Failed to post {item['id']}: {e}")
-            continue
+            # 履歴には追加しない（テストなので）
+        else:
+            try:
+                client.post_article(title, content, category=CATEGORY)
+                history.add(item['id'])
+                posted_this_run += 1
+            except Exception as e:
+                print(f"Failed to post {item['id']}: {e}")
+                continue
     
-    # 状態の更新
-    # ページ内のアイテムがすべて処理されたか、1件も新しいのがなかった場合はページを戻す
-    if posted_this_run == 0 and current_page > 2:
-        state['current_page'] = current_page - 1
-        print(f"Moving to next page: {state['current_page']}")
-    
-    # ファイルに保存
-    with open(history_path, 'w', encoding='utf-8') as f:
-        for hid in sorted(history):
-            f.write(f"{hid}\n")
-            
-    with open(state_path, 'w', encoding='utf-8') as f:
-        json.dump(state, f, indent=2)
+    if not dry_run:
+        # 状態の更新
+        if posted_this_run == 0 and current_page > 2:
+            state['current_page'] = current_page - 1
+            print(f"Moving to next page: {state['current_page']}")
+        
+        # ファイルに保存
+        with open(history_path, 'w', encoding='utf-8') as f:
+            for hid in sorted(history):
+                f.write(f"{hid}\n")
+                
+        with open(state_path, 'w', encoding='utf-8') as f:
+            json.dump(state, f, indent=2)
 
 if __name__ == "__main__":
-    process_posts()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dry-run", action="store_true", help="実際に投稿せずに内容を表示する")
+    args = parser.parse_args()
+    process_posts(dry_run=args.dry_run)

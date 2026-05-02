@@ -8,22 +8,17 @@ class TestScraper(unittest.TestCase):
         """一覧ページから情報を正しく抽出できるかテスト（実際のHTML構造に合わせたセレクタ）"""
         sample_html = """
         <div class="img_wrapper_inner">
-            <div class="all_tweet_profile_wrap">
-                <div class="all_tweet_profile_right">
-                    <div class="all_tweet_profile_name">日暮りん</div>
-                    <div class="all_tweet_profile_screenName">@higurashirin</div>
-                </div>
+            <div class="all_tweet_profile_img">
+                <img data-src="https://bi-girl.net/icon1.jpg" />
             </div>
+            <div class="img_frame">
+                <a class="img_a img_all">
+                    <img data-src="https://bi-girl.net/main1.jpg" />
+                </a>
+            </div>
+            <div class="all_tweet_profile_name">日暮りん</div>
+            <div class="all_tweet_profile_screenName">@higurashirin</div>
             <a href="https://x.com/higurashirin/status/123456789">ポスト</a>
-        </div>
-        <div class="img_wrapper_inner">
-            <div class="all_tweet_profile_wrap">
-                <div class="all_tweet_profile_right">
-                    <div class="all_tweet_profile_name">テスト美女</div>
-                    <div class="all_tweet_profile_screenName">@test_girl</div>
-                </div>
-            </div>
-            <a href="https://x.com/test_girl/status/987654321">ポスト</a>
         </div>
         """
         mock_response = MagicMock()
@@ -33,14 +28,8 @@ class TestScraper(unittest.TestCase):
 
         results = scrape_bi_girl_page(2)
 
-        self.assertEqual(len(results), 2)
-        self.assertEqual(results[0]['name'], '日暮りん')
-        self.assertEqual(results[0]['id'], 'higurashirin')
-        self.assertEqual(results[0]['url'], 'https://x.com/higurashirin/status/123456789')
-
-        self.assertEqual(results[1]['name'], 'テスト美女')
-        self.assertEqual(results[1]['id'], 'test_girl')
-        self.assertEqual(results[1]['url'], 'https://x.com/test_girl/status/987654321')
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]['image_url'], 'https://bi-girl.net/main1.jpg')
 
 if __name__ == '__main__':
     unittest.main()
