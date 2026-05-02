@@ -2,6 +2,7 @@ import json
 import os
 from livedoor_client import LivedoorClient
 from scraper import scrape_bi_girl_page
+from dmm_client import DMMClient
 
 import argparse
 
@@ -12,6 +13,9 @@ def process_posts(dry_run=False):
     BLOG_ID = os.getenv("LIVEDOOR_BLOG_ID", "ranking000-w6crxelo")
     CATEGORY = os.getenv("LIVEDOOR_CATEGORY")
     
+    DMM_API_ID = os.getenv("DMM_API_ID")
+    DMM_AFFILIATE_ID = os.getenv("DMM_AFFILIATE_ID")
+    
     if not dry_run and (not LD_ID or not API_KEY):
         print("LIVEDOOR_ID or LIVEDOOR_API_KEY not set. Skipping real post.")
         if not API_KEY:
@@ -19,6 +23,7 @@ def process_posts(dry_run=False):
         dry_run = True
 
     client = LivedoorClient(LD_ID, API_KEY, BLOG_ID) if LD_ID and API_KEY else None
+    dmm_client = DMMClient(DMM_API_ID, DMM_AFFILIATE_ID) if DMM_API_ID and DMM_AFFILIATE_ID else None
     
     # 状態（ページ番号）の読み込み
     state_path = 'state.json'
@@ -55,6 +60,23 @@ def process_posts(dry_run=False):
             continue
         
         print(f"Processing: {item['name']} (@{item['id']})")
+        
+        # DMM検索
+        dmm_section = ""
+        if dmm_client:
+            dmm_items = dmm_client.search_all(item['name'])
+            if dmm_items:
+                dmm_section = "<h3>DMM作品</h3><div style='display: flex; flex-wrap: wrap; gap: 10px;'>"
+                for d_item in dmm_items:
+                    dmm_section += f"""
+                    <div style='width: 45%;'>
+                        <a href='{d_item['url']}' target='_blank'>
+                            <img src='{d_item['image']}' style='width: 100%; border-radius: 5px;'>
+                        </a>
+                    </div>
+                    """
+                dmm_section += "</div>"
+
         title = f"ネットで見つけた美女 {item['name']} (@{item['id']})"
         # Xポストの埋め込みHTML (簡易版) と 画像
         image_html = f'<p><img src="{item["image_url"]}" style="max-width: 100%;"></p>' if item.get('image_url') else ""
@@ -62,6 +84,7 @@ def process_posts(dry_run=False):
         <p>アカウント名：{item['name']}</p>
         <p>X ID：@{item['id']}</p>
         {image_html}
+        {dmm_section}
         <p><a href="{item['url']}">{item['url']}</a></p>
         <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
         """
