@@ -31,5 +31,18 @@ class LivedoorClient:
         )
 
     def post_article(self, title, content):
-        """記事を投稿する (後ほど実装)"""
-        pass
+        """記事を投稿する"""
+        headers = {
+            'X-WSSE': self._get_wsse_header(),
+            'Content-Type': 'application/atom+xml'
+        }
+        entry = f"""<?xml version="1.0" encoding="utf-8"?>
+<entry xmlns="http://www.w3.org/2005/Atom">
+  <title>{title}</title>
+  <content type="text/html">
+    <![CDATA[{content}]]>
+  </content>
+</entry>"""
+        res = requests.post(self.endpoint, data=entry.encode('utf-8'), headers=headers)
+        res.raise_for_status()
+        return res.text
