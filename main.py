@@ -1,10 +1,16 @@
-import json
+import sys
 import os
+import json
 from livedoor_client import LivedoorClient
 from scraper import scrape_bi_girl_page
 from dmm_client import DMMClient
-
+from scraper_aru18 import scrape_aru18_top100
 import argparse
+
+# Windows環境でのエンコーディングエラー対策
+if sys.platform == "win32":
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 def process_posts(dry_run=False):
     # 設定の読み込み
@@ -41,22 +47,49 @@ def process_posts(dry_run=False):
     else:
         history = set()
 
-    current_page = state.get("current_page", 2000)
-    print(f"Scraping page {current_page}...")
+    # a-ru18.com キューの読み込み
+    queue_path = 'queue_aru18.json'
+    queue_items = []
+    if os.path.exists(queue_path):
+        with open(queue_path, 'r', encoding='utf-8') as f:
+            queue_data = json.load(f)
+            queue_items = queue_data.get("items", [])
+    elif True: # ファイルがない場合は常に作成を試みる
+        # キューファイルがない場合は新規作成（一度だけ実行）
+        print("Initializing a-ru18.com queue...")
+        queue_items = scrape_aru18_top100()
+        with open(queue_path, 'w', encoding='utf-8') as f:
+            json.dump({"items": queue_items}, f, indent=2, ensure_ascii=False)
+        print(f"Queue initialized with {len(queue_items)} items.")
+
+    items = []
+    source_is_queue = False
     
-    try:
-        items = scrape_bi_girl_page(current_page)
-    except Exception as e:
-        print(f"Failed to scrape page {current_page}: {e}")
-        return
+    if queue_items:
+        print(f"Found {len(queue_items)} items in a-ru18.com queue. Prioritizing...")
+        items = queue_items
+        source_is_queue = True
+    else:
+        current_page = state.get("current_page", 2000)
+        print(f"Scraping page {current_page}...")
+        try:
+            items = scrape_bi_girl_page(current_page)
+        except Exception as e:
+            print(f"Failed to scrape page {current_page}: {e}")
+            return
 
     posted_this_run = 0
+    remaining_queue = list(queue_items) if source_is_queue else []
+    
     for item in items:
         if posted_this_run >= 5:
             print("Batch limit reached (5 posts).")
             break
             
         if item['id'] in history:
+            if source_is_queue:
+                # すでに投稿済みの場合はキューから外して次へ
+                remaining_queue = [i for i in remaining_queue if i['id'] != item['id']]
             continue
         
         print(f"Processing: {item['name']} (@{item['id']})")
@@ -80,12 +113,14 @@ def process_posts(dry_run=False):
         title = f"ネットで見つけた美女 {item['name']} (@{item['id']})"
         # Xポストの埋め込みHTML (簡易版) と 画像
         image_html = f'<p><img src="{item["image_url"]}" style="max-width: 100%;"></p>' if item.get('image_url') else ""
+        # 投稿URLがなければXのプロフィールURLを推測
+        item_url = item.get('url', f"https://x.com/{item['id']}")
         content = f"""
         <p>アカウント名：{item['name']}</p>
         <p>X ID：@{item['id']}</p>
         {image_html}
         {dmm_section}
-        <p><a href="{item['url']}">{item['url']}</a></p>
+        <p><a href="{item_url}">{item_url}</a></p>
         <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
         """
         
@@ -96,19 +131,22 @@ def process_posts(dry_run=False):
             print(f"Content: {content[:200]}...")
             print(f"-----------------")
             posted_this_run += 1
-            # 履歴には追加しない（テストなので）
+            if source_is_queue:
+                remaining_queue = [i for i in remaining_queue if i['id'] != item['id']]
         else:
             try:
                 client.post_article(title, content, category=CATEGORY)
                 history.add(item['id'])
                 posted_this_run += 1
+                if source_is_queue:
+                    remaining_queue = [i for i in remaining_queue if i['id'] != item['id']]
             except Exception as e:
                 print(f"Failed to post {item['id']}: {e}")
                 continue
     
     if not dry_run:
         # 状態の更新
-        if posted_this_run == 0 and current_page > 2:
+        if not source_is_queue and posted_this_run == 0 and current_page > 2:
             state['current_page'] = current_page - 1
             print(f"Moving to next page: {state['current_page']}")
         
@@ -119,6 +157,12 @@ def process_posts(dry_run=False):
                 
         with open(state_path, 'w', encoding='utf-8') as f:
             json.dump(state, f, indent=2)
+
+        # キューの保存
+        if source_is_queue:
+            with open(queue_path, 'w', encoding='utf-8') as f:
+                json.dump({"items": remaining_queue}, f, indent=2, ensure_ascii=False)
+            print(f"Queue updated. {len(remaining_queue)} items remaining.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
