@@ -1,0 +1,12 @@
+﻿img_wrapper_inner 件数: 33
+x.com link: https://x.com/kaedecup/status/2033105940686450795
+python : Traceback (most recent call last):
+発生場所 行:1 文字:22
++ $env:PYTHONPATH="."; python debug_scraper.py 2>&1 | Out-File -Encodin ...
++                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "C:\Users\garoa\Desktop\美女図鑑\debug_scraper.py", line 19, in <module>
+    print(f'全テキスト:\n{card.get_text(separator="|", strip=True)[:300]}')
+UnicodeEncodeError: 'cp932' codec can't encode character '\U0001f33b' in position 14: illegal multibyte sequence
