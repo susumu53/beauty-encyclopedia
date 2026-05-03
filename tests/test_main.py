@@ -105,5 +105,57 @@ class TestMainLogic(unittest.TestCase):
             self.assertIn('dmm_url1', content)
             self.assertIn('DMM作品', content)
 
+    def test_process_posts_timeline_embed(self):
+        """Xタイムラインの埋め込みタグが含まれているかテスト"""
+        # 環境変数の設定
+        with patch.dict('os.environ', {
+            'LIVEDOOR_ID': 'test_user',
+            'LIVEDOOR_API_KEY': 'test_key',
+            'LIVEDOOR_BLOG_ID': 'test_blog'
+        }):
+            # モックの設定
+            with patch('os.path.exists') as mock_exists, \
+                 patch('main.LivedoorClient') as mock_client_class, \
+                 patch('main.scrape_bi_girl_page') as mock_scrape:
+                
+                mock_exists.return_value = True
+                # queue_reinasex.json などの読み込みを回避するため、exists を調整
+                def side_effect_exists(path):
+                    if 'queue' in path: return False
+                    return True
+                mock_exists.side_effect = side_effect_exists
+                
+                mock_scrape.return_value = [
+                    {'name': 'Girl A', 'id': 'girla_id', 'url': 'url1', 'images': ['img1.jpg']}
+                ]
+                
+                mock_client = mock_client_class.return_value
+                
+                # 状態と履歴の読み込み用モック
+                m = mock_open(read_data='{"current_page": 2000}')
+                m.side_effect = [
+                    mock_open(read_data='{"current_page": 2000}').return_value, # state read
+                    mock_open(read_data='').return_value,                       # history read
+                    mock_open().return_value,                                   # history write
+                    mock_open().return_value                                    # state write
+                ]
+
+                with patch('builtins.open', m):
+                    from main import process_posts
+                    process_posts(dry_run=False)
+
+                self.assertTrue(mock_client.post_article.called)
+                args, _ = mock_client.post_article.call_args
+                content = args[1]
+                
+                # Xタイムラインの埋め込みが含まれているか
+                self.assertIn('class="twitter-timeline"', content)
+                self.assertIn('data-height="600"', content)
+                self.assertIn('girla_id', content)
+                self.assertIn('widgets.js', content)
+                
+                # 元の画像タグが含まれていないか (Hotlinking対策)
+                self.assertNotIn('img1.jpg', content)
+
 if __name__ == '__main__':
     unittest.main()

@@ -153,27 +153,23 @@ def process_posts(dry_run=False):
             tiktok_id = item['tiktok'].rstrip('/').split('/')[-1]
             sns_links_html += f'<p style="font-size: 24px; font-weight: bold; margin: 20px 0;">🎵 TikTok：<a href="{item["tiktok"]}" target="_blank" style="font-size: 24px;">{tiktok_id}</a></p>'
 
+        # Xタイムライン埋め込み
+        timeline_html = f"""
+        <div style="margin: 20px 0;">
+            <a class="twitter-timeline" data-height="600" href="https://x.com/{item['id']}?ref_src=twsrc%5Etfw">Tweets by @{item['id']}</a>
+            <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+        </div>
+        """
+
         title = f"ネットで見つけた美女 {item['name']} (@{item['id']})"
         
-        # 画像セクションの構築 (複数枚対応)
-        image_html = ""
-        images = item.get('images', [])
-        if not images and item.get('image_url'):
-            images = [item['image_url']]
-            
-        if images:
-            image_html = "<div style='margin: 15px 0;'>"
-            for img_url in images[:3]: # 最大3枚
-                image_html += f'<p><img src="{img_url}" style="max-width: 100%; border-radius: 8px; margin-bottom: 10px;"></p>'
-            image_html += "</div>"
-
+        # 引用元URL
         item_url = item.get('url', f"https://x.com/{item['id']}")
         
-        x_profile_url = f"https://x.com/{item['id']}"
         content = f"""
         <p>アカウント名：{item['name']}</p>
         {sns_links_html}
-        {image_html}
+        {timeline_html}
         {dmm_section}
         <p style="margin-top: 20px;"><a href="{item_url}" target="_blank" style="color: #666; font-size: 12px;">引用元表示</a></p>
         """
