@@ -50,9 +50,9 @@ def process_posts(dry_run=False):
 
     # キューの定義（優先順位順）
     queues = [
+        {'path': 'queue_reinasex.json', 'name': 'ReinaSex Blog Collection'},
         {'path': 'queue_aru18.json', 'name': 'a-ru18.com Top 100'},
-        {'path': 'queue_ranking_net.json', 'name': 'ranking.net Gravure 50'},
-        {'path': 'queue_reinasex.json', 'name': 'ReinaSex Blog Collection'}
+        {'path': 'queue_ranking_net.json', 'name': 'ranking.net Gravure 50'}
     ]
 
     items = []
