@@ -132,11 +132,15 @@ def process_posts(dry_run=False):
                 dmm_section += "</div>"
 
         # SNSリンクの構築
-        sns_section = ""
+        sns_links_html = f'<p style="font-size: 24px; font-weight: bold; margin: 20px 0;">🐦 X (Twitter)：<a href="https://x.com/{item["id"]}" target="_blank" style="font-size: 24px;">@{item["id"]}</a></p>'
+        
         if item.get('insta'):
-            sns_section += f"<p style='font-size: 18px;'>📸 Instagram: <a href='{item['insta']}' target='_blank'>{item['insta']}</a></p>"
+            insta_id = item['insta'].rstrip('/').split('/')[-1]
+            sns_links_html += f'<p style="font-size: 24px; font-weight: bold; margin: 20px 0;">📸 Instagram：<a href="{item["insta"]}" target="_blank" style="font-size: 24px;">@{insta_id}</a></p>'
+        
         if item.get('tiktok'):
-            sns_section += f"<p style='font-size: 18px;'>🎵 TikTok: <a href='{item['tiktok']}' target='_blank'>{item['tiktok']}</a></p>"
+            tiktok_id = item['tiktok'].rstrip('/').split('/')[-1]
+            sns_links_html += f'<p style="font-size: 24px; font-weight: bold; margin: 20px 0;">🎵 TikTok：<a href="{item["tiktok"]}" target="_blank" style="font-size: 24px;">{tiktok_id}</a></p>'
 
         title = f"ネットで見つけた美女 {item['name']} (@{item['id']})"
         
@@ -157,12 +161,10 @@ def process_posts(dry_run=False):
         x_profile_url = f"https://x.com/{item['id']}"
         content = f"""
         <p>アカウント名：{item['name']}</p>
-        <p style="font-size: 24px; font-weight: bold; margin: 20px 0;">🐦 X (Twitter)：<a href="{x_profile_url}" target="_blank" style="font-size: 24px;">@{item['id']}</a></p>
-        {sns_section}
+        {sns_links_html}
         {image_html}
         {dmm_section}
-        <p><a href="{item_url}">{item_url}</a></p>
-        <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+        <p style="margin-top: 20px;"><a href="{item_url}" target="_blank" style="color: #666; font-size: 12px;">引用元表示</a></p>
         """
         
         if dry_run:
