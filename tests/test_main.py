@@ -148,14 +148,13 @@ class TestMainLogic(unittest.TestCase):
                 args, _ = mock_client.post_article.call_args
                 content = args[1]
                 
-                # Xタイムラインの埋め込みが含まれているか
-                self.assertIn('class="twitter-timeline"', content)
-                self.assertIn('data-height="600"', content)
-                self.assertIn('girla_id', content)
-                self.assertIn('widgets.js', content)
+                # X誘導ボタンが含まれているか
+                self.assertIn('X (Twitter) で最新の投稿を見る', content)
+                self.assertIn('background-color: #000', content)
                 
-                # 元の画像タグが含まれていないか (Hotlinking対策)
-                self.assertNotIn('img1.jpg', content)
+                # bi-girl.netからの投稿（regular）なので画像が含まれているか
+                self.assertIn('img1.jpg', content)
+                self.assertIn('<img src=', content)
 
 if __name__ == '__main__':
     unittest.main()
