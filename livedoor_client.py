@@ -59,5 +59,7 @@ class LivedoorClient:
 </entry>
 """
         res = requests.post(self.endpoint, data=entry_xml.encode('utf-8'), headers=headers)
+        if res.status_code >= 400:
+            print(f"Livedoor API Error: {res.status_code} - {res.text}")
         res.raise_for_status()
         return res.text

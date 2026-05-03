@@ -1,6 +1,7 @@
 import sys
 import os
 import json
+import datetime
 from livedoor_client import LivedoorClient
 from scraper import scrape_bi_girl_page
 from dmm_client import DMMClient
@@ -65,11 +66,21 @@ def process_posts(dry_run=False):
             with open(q['path'], 'r', encoding='utf-8') as f:
                 q_data = json.load(f)
                 q_items = q_data.get("items", [])
-                if q_items:
-                    print(f"Found {len(q_items)} items in {q['name']}. Prioritizing...")
+                
+                # このキューに未投稿のアイテムがあるか確認
+                has_new_items = False
+                for item in q_items:
+                    if item['id'].lower() not in history:
+                        has_new_items = True
+                        break
+                
+                if has_new_items:
+                    print(f"Found new items in {q['name']}. Prioritizing...")
                     priority_items = q_items
                     source_queue_path = q['path']
                     break
+                else:
+                    print(f"All items in {q['name']} are already in history. Checking next queue...")
 
     # 元の巡回（bi-girl.net）もチェック
     current_page = state.get("current_page", 2000)
@@ -187,7 +198,11 @@ def process_posts(dry_run=False):
                 else:
                     posted_regular_count += 1
             except Exception as e:
-                print(f"Failed to post {item['id']}: {e}")
+                error_msg = f"Failed to post {item['id']}: {e}"
+                print(error_msg)
+                # エラーをファイルに記録（GitHub Actionsでの確認用）
+                with open('error_log.txt', 'a', encoding='utf-8') as ef:
+                    ef.write(f"{datetime.datetime.now()}: {error_msg}\n")
                 continue
     
     if not dry_run:
