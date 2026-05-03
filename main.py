@@ -133,9 +133,10 @@ def process_posts(dry_run=False):
 
         item_url = item.get('url', f"https://x.com/{item['id']}")
         
+        x_profile_url = f"https://x.com/{item['id']}"
         content = f"""
         <p>アカウント名：{item['name']}</p>
-        <p>X ID：@{item['id']}</p>
+        <p style="font-size: 15px; font-weight: bold;">🐦 X (Twitter)：<a href="{x_profile_url}" target="_blank" style="font-size: 15px;">@{item['id']}</a></p>
         {sns_section}
         {image_html}
         {dmm_section}
