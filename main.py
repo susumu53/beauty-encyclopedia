@@ -43,7 +43,7 @@ def process_posts(dry_run=False):
     history_path = 'history.txt'
     if os.path.exists(history_path):
         with open(history_path, 'r', encoding='utf-8') as f:
-            history = set(line.strip() for line in f if line.strip())
+            history = set(line.strip().lower() for line in f if line.strip())
     else:
         history = set()
 
@@ -58,6 +58,8 @@ def process_posts(dry_run=False):
     source_queue_path = None
     
     # 優先順位に従ってキューをチェック
+    priority_items = []
+    source_queue_path = None
     for q in queues:
         if os.path.exists(q['path']):
             with open(q['path'], 'r', encoding='utf-8') as f:
@@ -65,34 +67,53 @@ def process_posts(dry_run=False):
                 q_items = q_data.get("items", [])
                 if q_items:
                     print(f"Found {len(q_items)} items in {q['name']}. Prioritizing...")
-                    items = q_items
+                    priority_items = q_items
                     source_queue_path = q['path']
                     break
 
-    # キューが空（または存在しない）場合は元の巡回へ
-    if not items:
-        current_page = state.get("current_page", 2000)
-        print(f"No priority queues found. Scraping page {current_page} from bi-girl.net...")
-        try:
-            items = scrape_bi_girl_page(current_page)
-        except Exception as e:
-            print(f"Failed to scrape page {current_page}: {e}")
-            return
+    # 元の巡回（bi-girl.net）もチェック
+    current_page = state.get("current_page", 2000)
+    print(f"Scraping page {current_page} from bi-girl.net...")
+    regular_items = []
+    try:
+        regular_items = scrape_bi_girl_page(current_page)
+    except Exception as e:
+        print(f"Failed to scrape page {current_page}: {e}")
+
+    # 合計5件になるように配分 (例: 優先 3, 通常 2)
+    items_to_post = []
+    
+    # 優先キューから取得
+    for p_item in priority_items:
+        if len(items_to_post) >= 3:
+            break
+        if p_item['id'].lower() not in [h.lower() for h in history]:
+            p_item['source_type'] = 'priority'
+            items_to_post.append(p_item)
+    
+    # 通常巡回から取得
+    for r_item in regular_items:
+        if len(items_to_post) >= 5:
+            break
+        if r_item['id'].lower() not in [h.lower() for h in history]:
+            r_item['source_type'] = 'regular'
+            items_to_post.append(r_item)
+    
+    # まだ足りない場合は優先キューから補充
+    if len(items_to_post) < 5:
+        for p_item in priority_items:
+            if len(items_to_post) >= 5:
+                break
+            if p_item['id'].lower() not in [h.lower() for h in history] and p_item not in items_to_post:
+                p_item['source_type'] = 'priority'
+                items_to_post.append(p_item)
 
     posted_this_run = 0
-    remaining_items = list(items)
+    posted_priority_ids = []
+    posted_regular_count = 0
     
-    for item in items:
-        if posted_this_run >= 5:
-            print("Batch limit reached (5 posts).")
-            break
-            
-        if item['id'] in history:
-            if source_queue_path:
-                remaining_items = [i for i in remaining_items if i['id'] != item['id']]
-            continue
-        
-        print(f"Processing: {item['name']} (@{item['id']})")
+    for item in items_to_post:
+        print(f"Processing ({item.get('source_type')}): {item['name']} (@{item['id']})")
         
         # DMM検索
         dmm_section = ""
@@ -113,9 +134,9 @@ def process_posts(dry_run=False):
         # SNSリンクの構築
         sns_section = ""
         if item.get('insta'):
-            sns_section += f"<p>📸 Instagram: <a href='{item['insta']}' target='_blank'>{item['insta']}</a></p>"
+            sns_section += f"<p style='font-size: 18px;'>📸 Instagram: <a href='{item['insta']}' target='_blank'>{item['insta']}</a></p>"
         if item.get('tiktok'):
-            sns_section += f"<p>🎵 TikTok: <a href='{item['tiktok']}' target='_blank'>{item['tiktok']}</a></p>"
+            sns_section += f"<p style='font-size: 18px;'>🎵 TikTok: <a href='{item['tiktok']}' target='_blank'>{item['tiktok']}</a></p>"
 
         title = f"ネットで見つけた美女 {item['name']} (@{item['id']})"
         
@@ -136,7 +157,7 @@ def process_posts(dry_run=False):
         x_profile_url = f"https://x.com/{item['id']}"
         content = f"""
         <p>アカウント名：{item['name']}</p>
-        <p style="font-size: 15px; font-weight: bold;">🐦 X (Twitter)：<a href="{x_profile_url}" target="_blank" style="font-size: 15px;">@{item['id']}</a></p>
+        <p style="font-size: 24px; font-weight: bold; margin: 20px 0;">🐦 X (Twitter)：<a href="{x_profile_url}" target="_blank" style="font-size: 24px;">@{item['id']}</a></p>
         {sns_section}
         {image_html}
         {dmm_section}
@@ -150,24 +171,37 @@ def process_posts(dry_run=False):
             print(f"Content snippet: {content[:200]}...")
             print(f"-----------------")
             posted_this_run += 1
-            if source_queue_path:
-                remaining_items = [i for i in remaining_items if i['id'] != item['id']]
+            if item.get('source_type') == 'priority':
+                posted_priority_ids.append(item['id'])
+            else:
+                posted_regular_count += 1
         else:
             try:
                 client.post_article(title, content, category=CATEGORY)
                 history.add(item['id'])
                 posted_this_run += 1
-                if source_queue_path:
-                    remaining_items = [i for i in remaining_items if i['id'] != item['id']]
+                if item.get('source_type') == 'priority':
+                    posted_priority_ids.append(item['id'])
+                else:
+                    posted_regular_count += 1
             except Exception as e:
                 print(f"Failed to post {item['id']}: {e}")
                 continue
     
     if not dry_run:
         # 状態の更新
-        if not source_queue_path and posted_this_run == 0 and current_page > 2:
-            state['current_page'] = current_page - 1
-            print(f"Moving to next page: {state['current_page']}")
+        # 全てのアイテムが既知だった場合、かつ通常投稿が1件もなかった場合
+        if posted_regular_count == 0 and len(regular_items) > 0 and current_page > 2:
+            # ページ内の未投稿がなくなったと判断
+            all_known = True
+            for r_item in regular_items:
+                if r_item['id'].lower() not in [h.lower() for h in history]:
+                    all_known = False
+                    break
+            
+            if all_known:
+                state['current_page'] = current_page - 1
+                print(f"Moving to next page: {state['current_page']}")
         
         # 履歴の保存
         with open(history_path, 'w', encoding='utf-8') as f:
@@ -179,7 +213,12 @@ def process_posts(dry_run=False):
             json.dump(state, f, indent=2)
 
         # キューの更新
-        if source_queue_path:
+        if source_queue_path and posted_priority_ids:
+            with open(source_queue_path, 'r', encoding='utf-8') as f:
+                q_data = json.load(f)
+                items = q_data.get("items", [])
+                remaining_items = [i for i in items if i['id'] not in posted_priority_ids]
+                
             with open(source_queue_path, 'w', encoding='utf-8') as f:
                 json.dump({"items": remaining_items}, f, indent=2, ensure_ascii=False)
             print(f"Queue {source_queue_path} updated. {len(remaining_items)} items remaining.")

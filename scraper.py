@@ -21,7 +21,7 @@ def scrape_bi_girl_page(page_num):
             id_el     = card.select_one('.all_tweet_profile_screenName')
             # メイン画像は .img_a の中にある。最初の img だとアイコンになる場合がある
             img_el    = card.select_one('.img_a img')
-            tweet_link_el = card.find('a', href=lambda h: h and 'x.com' in h and '/status/' in h)
+            tweet_link_el = card.find('a', href=lambda h: h and ('x.com' in h or 'twitter.com' in h) and '/status/' in h)
             
             if name_el and id_el and tweet_link_el:
                 raw_id = id_el.text.strip().lstrip('@')
