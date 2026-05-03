@@ -47,31 +47,32 @@ def process_posts(dry_run=False):
     else:
         history = set()
 
-    # a-ru18.com キューの読み込み
-    queue_path = 'queue_aru18.json'
-    queue_items = []
-    if os.path.exists(queue_path):
-        with open(queue_path, 'r', encoding='utf-8') as f:
-            queue_data = json.load(f)
-            queue_items = queue_data.get("items", [])
-    elif True: # ファイルがない場合は常に作成を試みる
-        # キューファイルがない場合は新規作成（一度だけ実行）
-        print("Initializing a-ru18.com queue...")
-        queue_items = scrape_aru18_top100()
-        with open(queue_path, 'w', encoding='utf-8') as f:
-            json.dump({"items": queue_items}, f, indent=2, ensure_ascii=False)
-        print(f"Queue initialized with {len(queue_items)} items.")
+    # キューの定義（優先順位順）
+    queues = [
+        {'path': 'queue_aru18.json', 'name': 'a-ru18.com Top 100'},
+        {'path': 'queue_ranking_net.json', 'name': 'ranking.net Gravure 50'},
+        {'path': 'queue_reinasex.json', 'name': 'ReinaSex Blog Collection'}
+    ]
 
     items = []
-    source_is_queue = False
+    source_queue_path = None
     
-    if queue_items:
-        print(f"Found {len(queue_items)} items in a-ru18.com queue. Prioritizing...")
-        items = queue_items
-        source_is_queue = True
-    else:
+    # 優先順位に従ってキューをチェック
+    for q in queues:
+        if os.path.exists(q['path']):
+            with open(q['path'], 'r', encoding='utf-8') as f:
+                q_data = json.load(f)
+                q_items = q_data.get("items", [])
+                if q_items:
+                    print(f"Found {len(q_items)} items in {q['name']}. Prioritizing...")
+                    items = q_items
+                    source_queue_path = q['path']
+                    break
+
+    # キューが空（または存在しない）場合は元の巡回へ
+    if not items:
         current_page = state.get("current_page", 2000)
-        print(f"Scraping page {current_page}...")
+        print(f"No priority queues found. Scraping page {current_page} from bi-girl.net...")
         try:
             items = scrape_bi_girl_page(current_page)
         except Exception as e:
@@ -79,7 +80,7 @@ def process_posts(dry_run=False):
             return
 
     posted_this_run = 0
-    remaining_queue = list(queue_items) if source_is_queue else []
+    remaining_items = list(items)
     
     for item in items:
         if posted_this_run >= 5:
@@ -87,9 +88,8 @@ def process_posts(dry_run=False):
             break
             
         if item['id'] in history:
-            if source_is_queue:
-                # すでに投稿済みの場合はキューから外して次へ
-                remaining_queue = [i for i in remaining_queue if i['id'] != item['id']]
+            if source_queue_path:
+                remaining_items = [i for i in remaining_items if i['id'] != item['id']]
             continue
         
         print(f"Processing: {item['name']} (@{item['id']})")
@@ -110,14 +110,33 @@ def process_posts(dry_run=False):
                     """
                 dmm_section += "</div>"
 
+        # SNSリンクの構築
+        sns_section = ""
+        if item.get('insta'):
+            sns_section += f"<p>📸 Instagram: <a href='{item['insta']}' target='_blank'>{item['insta']}</a></p>"
+        if item.get('tiktok'):
+            sns_section += f"<p>🎵 TikTok: <a href='{item['tiktok']}' target='_blank'>{item['tiktok']}</a></p>"
+
         title = f"ネットで見つけた美女 {item['name']} (@{item['id']})"
-        # Xポストの埋め込みHTML (簡易版) と 画像
-        image_html = f'<p><img src="{item["image_url"]}" style="max-width: 100%;"></p>' if item.get('image_url') else ""
-        # 投稿URLがなければXのプロフィールURLを推測
+        
+        # 画像セクションの構築 (複数枚対応)
+        image_html = ""
+        images = item.get('images', [])
+        if not images and item.get('image_url'):
+            images = [item['image_url']]
+            
+        if images:
+            image_html = "<div style='margin: 15px 0;'>"
+            for img_url in images[:3]: # 最大3枚
+                image_html += f'<p><img src="{img_url}" style="max-width: 100%; border-radius: 8px; margin-bottom: 10px;"></p>'
+            image_html += "</div>"
+
         item_url = item.get('url', f"https://x.com/{item['id']}")
+        
         content = f"""
         <p>アカウント名：{item['name']}</p>
         <p>X ID：@{item['id']}</p>
+        {sns_section}
         {image_html}
         {dmm_section}
         <p><a href="{item_url}">{item_url}</a></p>
@@ -127,42 +146,42 @@ def process_posts(dry_run=False):
         if dry_run:
             print(f"--- [DRY RUN] ---")
             print(f"Title: {title}")
-            print(f"Category: {CATEGORY}")
-            print(f"Content: {content[:200]}...")
+            print(f"Content snippet: {content[:200]}...")
             print(f"-----------------")
             posted_this_run += 1
-            if source_is_queue:
-                remaining_queue = [i for i in remaining_queue if i['id'] != item['id']]
+            if source_queue_path:
+                remaining_items = [i for i in remaining_items if i['id'] != item['id']]
         else:
             try:
                 client.post_article(title, content, category=CATEGORY)
                 history.add(item['id'])
                 posted_this_run += 1
-                if source_is_queue:
-                    remaining_queue = [i for i in remaining_queue if i['id'] != item['id']]
+                if source_queue_path:
+                    remaining_items = [i for i in remaining_items if i['id'] != item['id']]
             except Exception as e:
                 print(f"Failed to post {item['id']}: {e}")
                 continue
     
     if not dry_run:
         # 状態の更新
-        if not source_is_queue and posted_this_run == 0 and current_page > 2:
+        if not source_queue_path and posted_this_run == 0 and current_page > 2:
             state['current_page'] = current_page - 1
             print(f"Moving to next page: {state['current_page']}")
         
-        # ファイルに保存
+        # 履歴の保存
         with open(history_path, 'w', encoding='utf-8') as f:
             for hid in sorted(history):
                 f.write(f"{hid}\n")
                 
+        # 状態の保存
         with open(state_path, 'w', encoding='utf-8') as f:
             json.dump(state, f, indent=2)
 
-        # キューの保存
-        if source_is_queue:
-            with open(queue_path, 'w', encoding='utf-8') as f:
-                json.dump({"items": remaining_queue}, f, indent=2, ensure_ascii=False)
-            print(f"Queue updated. {len(remaining_queue)} items remaining.")
+        # キューの更新
+        if source_queue_path:
+            with open(source_queue_path, 'w', encoding='utf-8') as f:
+                json.dump({"items": remaining_items}, f, indent=2, ensure_ascii=False)
+            print(f"Queue {source_queue_path} updated. {len(remaining_items)} items remaining.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
