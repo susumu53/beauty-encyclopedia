@@ -42,7 +42,8 @@ def scrape_reinasex(category=1, max_pages=10, exclude_urls=None):
                         continue
 
                     title = link_tag.get_text(strip=True)
-                    name = title.split('さん')[0].split('-')[0].replace('SNSアカウント情報', '').replace('【', '').replace('】', '').strip()
+                    # 「きれいなお姉さん無修正」などの不要な文言を削除
+                    name = title.split('さん')[0].split(' - ')[0].split('－')[0].replace('SNSアカウント情報', '').replace('きれいなお姉さん無修正', '').replace('【', '').replace('】', '').strip()
                     
                     # entry ID
                     entry_id_match = re.search(r'blog-entry-(\d+)', post_url)

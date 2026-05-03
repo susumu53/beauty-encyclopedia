@@ -177,7 +177,9 @@ def process_posts(dry_run=False):
         </div>
         """
 
-        title = f"ネットで見つけた美女 {item['name']} (@{item['id']})"
+        # タイトルの生成 (ReinaSex特有の文言を削除)
+        clean_name = item['name'].replace(' - きれいなお姉さん無修正', '').replace('きれいなお姉さん無修正', '').strip().rstrip('-').strip()
+        title = f"ネットで見つけた美女 {clean_name} (@{item['id']})"
         
         # 引用元URL
         item_url = item.get('url', f"https://x.com/{item['id']}")
