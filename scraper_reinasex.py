@@ -3,11 +3,17 @@ from bs4 import BeautifulSoup
 import re
 import time
 import json
+import os
 
-def scrape_reinasex_all():
-    base_url = "https://reinasex.blog.2nt.com/blog-category-12"
-    # ページ指定のリストを作成 (12, 12-1, ..., 12-24)
-    pages = ["12.html"] + [f"12-{i}.html" for i in range(1, 25)]
+def scrape_reinasex(category=12, max_pages=10):
+    """
+    ReinaSexブログから情報を取得する
+    category: 12 (Cosplayers), 1 (AV Actresses)
+    max_pages: 取得する最大ページ数
+    """
+    base_url = f"https://reinasex.blog.2nt.com/blog-category-{category}"
+    # ページ指定のリストを作成
+    pages = [f"{category}.html"] + [f"{category}-{i}.html" for i in range(1, max_pages)]
     
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
@@ -40,8 +46,11 @@ def scrape_reinasex_all():
                     
                     # 名前 (タイトルから推測するか、本文から探す)
                     title = p_soup.find('title').get_text(strip=True).split('|')[0].strip()
-                    # 名前だけに絞り込む (例: "女優名 SNSアカウント情報" -> "女優名")
-                    name = title.replace('SNSアカウント情報', '').replace('【', '').replace('】', '').strip()
+                    # 名前だけに絞り込む
+                    name = title.split('さん')[0].split('-')[0].replace('SNSアカウント情報', '').replace('【', '').replace('】', '').strip()
+                    # entry IDをIDの代わりとして抽出 (例: blog-entry-1617.html -> 1617)
+                    entry_id_match = re.search(r'blog-entry-(\d+)', post_url)
+                    entry_id = entry_id_match.group(1) if entry_id_match else str(int(time.time()))
                     
                     # 本文
                     content_body = p_soup.select_one('.entry-content, .entry_body, .post-body, .post_content')
@@ -79,10 +88,10 @@ def scrape_reinasex_all():
                             if len(images) >= 3:
                                 break
                     
-                    if name and x_id:
+                    if name:
                         all_items.append({
                             "name": name,
-                            "id": x_id,
+                            "id": x_id if x_id else f"reina_{entry_id}",
                             "insta": insta_url,
                             "images": images,
                             "url": post_url,
@@ -99,7 +108,31 @@ def scrape_reinasex_all():
     return all_items
 
 if __name__ == "__main__":
-    data = scrape_reinasex_all()
-    with open('queue_reinasex.json', 'w', encoding='utf-8') as f:
-        json.dump({"items": data}, f, indent=2, ensure_ascii=False)
-    print(f"Finished! Total items: {len(data)}")
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--category", type=int, default=1, help="Category ID (1 for AV, 12 for Cosplay)")
+    parser.add_argument("--pages", type=int, default=5, help="Number of pages to scrape")
+    args = parser.parse_args()
+
+    data = scrape_reinasex(category=args.category, max_pages=args.pages)
+    
+    # 既存のキューを読み込む（マージするため）
+    queue_path = 'queue_reinasex.json'
+    if os.path.exists(queue_path):
+        with open(queue_path, 'r', encoding='utf-8') as f:
+            old_data = json.load(f)
+            old_items = old_data.get("items", [])
+    else:
+        old_items = []
+
+    # 重複除去してマージ（URLをキーにする）
+    seen_urls = {item['url'] for item in old_items}
+    new_items = old_items
+    for item in data:
+        if item['url'] not in seen_urls:
+            new_items.append(item)
+            seen_urls.add(item['url'])
+
+    with open(queue_path, 'w', encoding='utf-8') as f:
+        json.dump({"items": new_items}, f, indent=2, ensure_ascii=False)
+    print(f"Finished! Total items in queue: {len(new_items)} (Added {len(new_items) - len(old_items)} new items)")
