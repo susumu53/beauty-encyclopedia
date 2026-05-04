@@ -91,40 +91,63 @@ def process_posts(dry_run=False):
     except Exception as e:
         print(f"Failed to scrape page {current_page}: {e}")
 
-    # 合計5件になるように配分 (例: 優先 3, 通常 2)
+    # 合計5件になるように配分
     items_to_post = []
+    seen_ids = set()
     
-    # 優先キューから取得
+    # 優先キューから取得 (最大3件)
     for p_item in priority_items:
         if len(items_to_post) >= 3:
             break
-        if p_item['id'].lower() not in [h.lower() for h in history]:
+        p_id = p_item.get('id')
+        if not p_id:
+            continue
+        p_id_low = p_id.lower()
+        if p_id_low not in history and p_id_low not in seen_ids:
             p_item['source_type'] = 'priority'
             items_to_post.append(p_item)
+            seen_ids.add(p_id_low)
     
-    # 通常巡回から取得
+    # 通常巡回から取得 (合計5件まで)
     for r_item in regular_items:
         if len(items_to_post) >= 5:
             break
-        if r_item['id'].lower() not in [h.lower() for h in history]:
+        r_id = r_item.get('id')
+        if not r_id:
+            continue
+        r_id_low = r_id.lower()
+        if r_id_low not in history and r_id_low not in seen_ids:
             r_item['source_type'] = 'regular'
             items_to_post.append(r_item)
+            seen_ids.add(r_id_low)
     
-    # まだ足りない場合は優先キューから補充
+    # まだ足りない場合は優先キューからさらに補充
     if len(items_to_post) < 5:
         for p_item in priority_items:
             if len(items_to_post) >= 5:
                 break
-            if p_item['id'].lower() not in [h.lower() for h in history] and p_item not in items_to_post:
+            p_id = p_item.get('id')
+            if not p_id:
+                continue
+            p_id_low = p_id.lower()
+            if p_id_low not in history and p_id_low not in seen_ids:
                 p_item['source_type'] = 'priority'
                 items_to_post.append(p_item)
+                seen_ids.add(p_id_low)
 
     posted_this_run = 0
     posted_priority_ids = []
     posted_regular_count = 0
     
+    if not items_to_post:
+        print("No new items to post.")
+        return
+
+    print(f"Selected {len(items_to_post)} items to post.")
+    
     for item in items_to_post:
-        print(f"Processing ({item.get('source_type')}): {item['name']} (@{item['id']})")
+        item_id = item.get('id', 'unknown')
+        print(f"Processing ({item.get('source_type')}): {item['name']} (@{item_id})")
         
         # DMM検索
         dmm_section = ""
@@ -206,18 +229,21 @@ def process_posts(dry_run=False):
         else:
             try:
                 client.post_article(title, content, category=CATEGORY)
-                history.add(item['id'])
+                history.add(item['id'].lower())
                 posted_this_run += 1
                 if item.get('source_type') == 'priority':
-                    posted_priority_ids.append(item['id'])
+                    posted_priority_ids.append(item['id'].lower())
                 else:
                     posted_regular_count += 1
             except Exception as e:
-                error_msg = f"Failed to post {item['id']}: {e}"
+                error_msg = f"Failed to post {item.get('id', 'unknown')}: {e}"
                 print(error_msg)
                 # エラーをファイルに記録（GitHub Actionsでの確認用）
-                with open('error_log.txt', 'a', encoding='utf-8') as ef:
-                    ef.write(f"{datetime.datetime.now()}: {error_msg}\n")
+                try:
+                    with open('error_log.txt', 'a', encoding='utf-8') as ef:
+                        ef.write(f"{datetime.datetime.now()}: {error_msg}\n")
+                except:
+                    pass
                 continue
     
     if not dry_run:
@@ -227,7 +253,7 @@ def process_posts(dry_run=False):
             # ページ内の未投稿がなくなったと判断
             all_known = True
             for r_item in regular_items:
-                if r_item['id'].lower() not in [h.lower() for h in history]:
+                if r_item['id'].lower() not in history:
                     all_known = False
                     break
             
@@ -245,11 +271,12 @@ def process_posts(dry_run=False):
             json.dump(state, f, indent=2)
 
         # キューの更新
-        if source_queue_path and posted_priority_ids:
+        if source_queue_path:
             with open(source_queue_path, 'r', encoding='utf-8') as f:
                 q_data = json.load(f)
                 items = q_data.get("items", [])
-                remaining_items = [i for i in items if i['id'] not in posted_priority_ids]
+                # 履歴にあるものをすべて除外
+                remaining_items = [i for i in items if i['id'].lower() not in history]
                 
             with open(source_queue_path, 'w', encoding='utf-8') as f:
                 json.dump({"items": remaining_items}, f, indent=2, ensure_ascii=False)
