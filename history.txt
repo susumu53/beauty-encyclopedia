@@ -156,6 +156,7 @@ reina_1492
 reina_1500
 reina_1501
 reina_1514
+reina_1518
 reina_1521
 reina_1532
 reina_1547
@@ -167,8 +168,12 @@ reina_1586
 reina_1588
 reina_1617
 reina_1636
+reina_1650
 reina_1651
 reina_1652
+reina_1654
+reina_1656
+reina_1660
 reina_1662
 reina_1667
 reina_1668
