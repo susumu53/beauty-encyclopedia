@@ -153,6 +153,8 @@ reina_1472
 reina_1486
 reina_1492
 reina_1500
+reina_1501
+reina_1514
 reina_1521
 reina_1532
 reina_1557
@@ -185,6 +187,7 @@ reina_1757
 reina_1759
 reina_1768
 reina_1774
+reina_996
 reinaohara_1030
 remu19971203
 rena_miyashita
@@ -192,6 +195,7 @@ riina1126_ryry
 rikachan2746
 rina_kurebayash
 riri_nntmr
+risa_mitsui
 ryu_enami
 saika_kawakita
 sawako1023u
@@ -207,6 +211,7 @@ soyogi_maru
 takomayuyi
 tama111tama
 taonuanjiang521
+tenchan_nxn
 tenshinhan0327
 towa_rabbit_m
 ts_takasho
