@@ -200,7 +200,9 @@ reina_1554
 reina_1557
 reina_1562
 reina_1570
+reina_1572
 reina_1573
+reina_1574
 reina_1578
 reina_1579
 reina_1580
@@ -258,6 +260,7 @@ reina_1757
 reina_1759
 reina_1768
 reina_1774
+reina_973
 reina_996
 reinaohara_1030
 remu19971203
@@ -266,6 +269,7 @@ riina1126_ryry
 rikachan2746
 riku_cos_9
 rina_kurebayash
+rindinosaur
 rio_hcup_fantia
 riri_nntmr
 risa_mitsui
@@ -286,6 +290,7 @@ sorarin_r
 soyogi_maru
 takomayuyi
 tama111tama
+tamano_primo
 taonuanjiang521
 tenchan_nxn
 tenshinhan0327
