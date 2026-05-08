@@ -212,15 +212,19 @@ def process_posts(dry_run=False):
         # サムネイル（一番最初の画像）
         thumbnail_url = images[0] if images else None
 
-        # X (Twitter) 誘導ボタン (埋め込みの代わり)
-        x_button_html = ""
+        # X (Twitter) タイムライン埋め込み
+        x_embed_html = ""
         if has_x:
-            x_button_html = f"""
-            <div style="margin: 30px 0; text-align: center;">
-                <a href="https://x.com/{item['id']}" target="_blank" 
-                   style="display: inline-block; padding: 16px 32px; background-color: #000; color: #fff; text-decoration: none; border-radius: 50px; font-weight: bold; font-size: 18px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                   🐦 X (Twitter) で最新の投稿を見る
+            x_embed_html = f"""
+            <div style="margin: 30px 0;">
+                <p style="font-weight: bold; margin-bottom: 10px;">最新のツイート</p>
+                <a class="twitter-timeline" 
+                   data-height="600" 
+                   data-chrome="noheader nofooter noborders" 
+                   href="https://twitter.com/{item['id']}?ref_src=twsrc%5Etfw">
+                   Tweets by {item['id']}
                 </a>
+                <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
             </div>
             """
 
@@ -241,7 +245,7 @@ def process_posts(dry_run=False):
         <p>アカウント名：{item['name']}</p>
         {sns_links_html}
         {image_html}
-        {x_button_html}
+        {x_embed_html}
         {dmm_section}
         <p style="margin-top: 20px;"><a href="{item_url}" target="_blank" style="color: #666; font-size: 12px;">引用元表示</a></p>
         """
