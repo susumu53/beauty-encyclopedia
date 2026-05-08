@@ -73,6 +73,9 @@ def scrape_yuuzuki():
             curr = curr.find_next_sibling()
             
         if handle:
+            if not images:
+                images.append("https://dougo-yuuzuki.jp/wp-content/uploads/2024/06/インスタ.jpg")
+                
             items.append({
                 "name": name,
                 "id": handle,

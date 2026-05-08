@@ -35,6 +35,9 @@ def scrape_lifecolle():
         insta_url = ""
         images = []
         
+        # 記事全体の代表画像をデフォルトとして保持
+        fallback_img = "https://www.lifecolle.com/wp-content/uploads/2021/04/instagram-bijyo-summary.png"
+        
         curr = h3.find_next_sibling()
         # 次のh3か、要素がなくなるまでループ
         while curr and curr.name != "h3":
@@ -63,6 +66,9 @@ def scrape_lifecolle():
             
         if insta_url:
             insta_id = insta_url.split("/")[-1]
+            if not images:
+                images.append(fallback_img)
+                
             # IDが数字などの場合はスキップするか検討が必要だが、基本的には保存
             items.append({
                 "name": name,
