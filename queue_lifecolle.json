@@ -1,39 +1,6 @@
 {
   "items": [
     {
-      "name": "横田真悠",
-      "id": "yokota_mayuu",
-      "insta": "https://www.instagram.com/yokota_mayuu",
-      "images": [
-        "https://www.lifecolle.com/wp-content/uploads/2021/05/6227e9ce70d9a9e331d381333e02648c.png"
-      ],
-      "url": "https://www.lifecolle.com/instagram-bijyo/",
-      "source": "lifecolle",
-      "source_type": "priority"
-    },
-    {
-      "name": "久間田琳加",
-      "id": "rinka_kumada0223",
-      "insta": "https://www.instagram.com/rinka_kumada0223",
-      "images": [
-        "https://www.lifecolle.com/wp-content/uploads/2021/05/6227e9ce70d9a9e331d381333e02648c.png"
-      ],
-      "url": "https://www.lifecolle.com/instagram-bijyo/",
-      "source": "lifecolle",
-      "source_type": "priority"
-    },
-    {
-      "name": "yuinaさん(@yuin.a)",
-      "id": "yuin.a",
-      "insta": "https://www.instagram.com/yuin.a",
-      "images": [
-        "https://www.lifecolle.com/wp-content/uploads/2021/05/6227e9ce70d9a9e331d381333e02648c.png"
-      ],
-      "url": "https://www.lifecolle.com/instagram-bijyo/",
-      "source": "lifecolle",
-      "source_type": "priority"
-    },
-    {
       "name": "金城ゆき yuki kaneshiroさん(@yukikaneshiro)",
       "id": "yukikaneshiro",
       "insta": "https://www.instagram.com/yukikaneshiro",
