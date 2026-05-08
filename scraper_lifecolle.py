@@ -36,7 +36,7 @@ def scrape_lifecolle():
         images = []
         
         # 記事全体の代表画像をデフォルトとして保持
-        fallback_img = "https://www.lifecolle.com/wp-content/uploads/2021/04/instagram-bijyo-summary.png"
+        fallback_img = "https://www.lifecolle.com/wp-content/uploads/2021/05/6227e9ce70d9a9e331d381333e02648c.png"
         
         curr = h3.find_next_sibling()
         # 次のh3か、要素がなくなるまでループ
