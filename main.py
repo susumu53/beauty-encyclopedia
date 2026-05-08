@@ -50,6 +50,8 @@ def process_posts(dry_run=False):
 
     # キューの定義（優先順位順）
     queues = [
+        {'path': 'queue_lifecolle.json', 'name': 'Lifecolle Instagram Collection'},
+        {'path': 'queue_yuuzuki.json', 'name': 'Dougo-Yuuzuki Column Collection'},
         {'path': 'queue_reinasex.json', 'name': 'ReinaSex Blog Collection'},
         {'path': 'queue_aru18.json', 'name': 'a-ru18.com Top 100'},
         {'path': 'queue_ranking_net.json', 'name': 'ranking.net Gravure 50'}
@@ -165,44 +167,72 @@ def process_posts(dry_run=False):
                     """
                 dmm_section += "</div>"
 
-        # SNSリンクの構築
-        sns_links_html = f'<p style="font-size: 24px; font-weight: bold; margin: 20px 0;">🐦 X (Twitter)：<a href="https://x.com/{item["id"]}" target="_blank" style="font-size: 24px;">@{item["id"]}</a></p>'
+        # SNSリンクの存在確認
+        # lifecolle, yuuzuki は Instagram がメインなので X は無しとする
+        is_placeholder_x = item.get('is_placeholder_id', False) or \
+                          (item.get('source') == 'reinasex' and item['id'].startswith('reina_')) or \
+                          (item.get('source') in ['lifecolle', 'yuuzuki'])
         
-        if item.get('insta'):
+        has_x = not is_placeholder_x
+        has_insta = bool(item.get('insta'))
+        has_tiktok = bool(item.get('tiktok'))
+        
+        if not (has_x or has_insta or has_tiktok):
+            print(f"Skipping {item['name']} - No valid SNS links found.")
+            # 履歴に追加して次回以降スキップ＆キューから削除されるようにする
+            history.add(item['id'].lower())
+            continue
+
+        # SNSリンクの構築
+        sns_links_html = ""
+        if has_x:
+            sns_links_html += f'<p style="font-size: 24px; font-weight: bold; margin: 20px 0;">🐦 X (Twitter)：<a href="https://x.com/{item["id"]}" target="_blank" style="font-size: 24px;">@{item["id"]}</a></p>'
+        
+        if has_insta:
             insta_id = item['insta'].rstrip('/').split('/')[-1]
             sns_links_html += f'<p style="font-size: 24px; font-weight: bold; margin: 20px 0;">📸 Instagram：<a href="{item["insta"]}" target="_blank" style="font-size: 24px;">@{insta_id}</a></p>'
         
-        if item.get('tiktok'):
+        if has_tiktok:
             tiktok_id = item['tiktok'].rstrip('/').split('/')[-1]
             sns_links_html += f'<p style="font-size: 24px; font-weight: bold; margin: 20px 0;">🎵 TikTok：<a href="{item["tiktok"]}" target="_blank" style="font-size: 24px;">{tiktok_id}</a></p>'
         
-        # 画像セクションの構築 (bi-girl.netなどの直リンク可能な場合のみ)
+        # 画像セクションの構築 (直リンク可能な場合)
         image_html = ""
-        # regular (bi-girl.net) か、priorityかつreinasex以外の場合に画像を表示
-        if item.get('source_type') == 'regular' or (item.get('source_type') == 'priority' and item.get('source') != 'reinasex'):
-            images = item.get('images', [])
-            if not images and item.get('image_url'):
-                images = [item['image_url']]
-            
-            if images:
-                image_html = "<div style='margin: 15px 0;'>"
-                for img_url in images[:3]: # 最大3枚
-                    image_html += f'<p><img src="{img_url}" style="max-width: 100%; border-radius: 8px; margin-bottom: 10px;"></p>'
-                image_html += "</div>"
+        images = item.get('images', [])
+        if not images and item.get('image_url'):
+            images = [item['image_url']]
+        
+        # 2ntなどの特定の画像を除外していた制限を解除
+        if images:
+            image_html = "<div style='margin: 15px 0;'>"
+            for img_url in images[:3]: # 最大3枚を表示
+                image_html += f'<p><img src="{img_url}" style="max-width: 100%; border-radius: 8px; margin-bottom: 10px;"></p>'
+            image_html += "</div>"
+
+        # サムネイル（一番最初の画像）
+        thumbnail_url = images[0] if images else None
 
         # X (Twitter) 誘導ボタン (埋め込みの代わり)
-        x_button_html = f"""
-        <div style="margin: 30px 0; text-align: center;">
-            <a href="https://x.com/{item['id']}" target="_blank" 
-               style="display: inline-block; padding: 16px 32px; background-color: #000; color: #fff; text-decoration: none; border-radius: 50px; font-weight: bold; font-size: 18px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-               🐦 X (Twitter) で最新の投稿を見る
-            </a>
-        </div>
-        """
+        x_button_html = ""
+        if has_x:
+            x_button_html = f"""
+            <div style="margin: 30px 0; text-align: center;">
+                <a href="https://x.com/{item['id']}" target="_blank" 
+                   style="display: inline-block; padding: 16px 32px; background-color: #000; color: #fff; text-decoration: none; border-radius: 50px; font-weight: bold; font-size: 18px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                   🐦 X (Twitter) で最新の投稿を見る
+                </a>
+            </div>
+            """
 
         # タイトルの生成 (ReinaSex特有の文言を削除)
         clean_name = item['name'].replace(' - きれいなお姉さん無修正', '').replace('きれいなお姉さん無修正', '').strip().rstrip('-').strip()
-        title = f"ネットで見つけた美女 {clean_name} (@{item['id']})"
+        if has_x:
+            title = f"ネットで見つけた美女 {clean_name} (@{item['id']})"
+        elif has_insta:
+            insta_id = item['insta'].rstrip('/').split('/')[-1]
+            title = f"ネットで見つけた美女 {clean_name} (@{insta_id})"
+        else:
+            title = f"ネットで見つけた美女 {clean_name}"
         
         # 引用元URL
         item_url = item.get('url', f"https://x.com/{item['id']}")
@@ -219,6 +249,7 @@ def process_posts(dry_run=False):
         if dry_run:
             print(f"--- [DRY RUN] ---")
             print(f"Title: {title}")
+            print(f"Thumbnail: {thumbnail_url}")
             print(f"Content snippet: {content[:200]}...")
             print(f"-----------------")
             posted_this_run += 1
@@ -228,7 +259,7 @@ def process_posts(dry_run=False):
                 posted_regular_count += 1
         else:
             try:
-                client.post_article(title, content, category=CATEGORY)
+                client.post_article(title, content, category=CATEGORY, thumbnail_url=thumbnail_url)
                 history.add(item['id'].lower())
                 posted_this_run += 1
                 if item.get('source_type') == 'priority':

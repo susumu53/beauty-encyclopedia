@@ -48,7 +48,7 @@ jobs:
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
         git config --global user.name "github-actions[bot]"
         # Check files individually and add them if they exist
-        for file in state.json history.txt queue_aru18.json queue_ranking_net.json queue_reinasex.json error_log.txt; do
+        for file in state.json history.txt queue_lifecolle.json queue_yuuzuki.json queue_aru18.json queue_ranking_net.json queue_reinasex.json error_log.txt; do
           if [ -f "$file" ]; then
             git add "$file"
             echo "Added $file to commit"

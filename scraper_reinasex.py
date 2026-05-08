@@ -26,6 +26,7 @@ def scrape_reinasex(category=1, max_pages=10, exclude_urls=None):
         try:
             res = requests.get(url, headers=headers, timeout=20)
             res.raise_for_status()
+            res.encoding = res.apparent_encoding
             soup = BeautifulSoup(res.text, 'html.parser')
             
             # h2タグ（記事タイトル）を起点にする
@@ -42,8 +43,16 @@ def scrape_reinasex(category=1, max_pages=10, exclude_urls=None):
                         continue
 
                     title = link_tag.get_text(strip=True)
+                    # タイトルからX IDを抽出 (例: "Name(@handle)さん")
+                    x_id_in_title = None
+                    x_title_match = re.search(r'[(@（＠]([a-zA-Z0-9_]+)[)）]', title)
+                    if x_title_match:
+                        x_id_in_title = x_title_match.group(1)
+
                     # 「きれいなお姉さん無修正」などの不要な文言を削除
                     name = title.split('さん')[0].split(' - ')[0].split('－')[0].replace('SNSアカウント情報', '').replace('きれいなお姉さん無修正', '').replace('【', '').replace('】', '').strip()
+                    # 名前の中に(@handle)が残っている場合は削除
+                    name = re.sub(r'[(@（＠][a-zA-Z0-9_]+[)）]', '', name).strip()
                     
                     # entry ID
                     entry_id_match = re.search(r'blog-entry-(\d+)', post_url)
@@ -64,6 +73,9 @@ def scrape_reinasex(category=1, max_pages=10, exclude_urls=None):
                     x_match = re.search(r'x\.com/([a-zA-Z0-9_]+)', body_html) or re.search(r'twitter\.com/([a-zA-Z0-9_]+)', body_html)
                     if x_match:
                         x_id = x_match.group(1)
+                    
+                    if not x_id and x_id_in_title:
+                        x_id = x_id_in_title
                     
                     insta_url = None
                     insta_match = re.search(r'(https://www\.instagram\.com/[a-zA-Z0-9_\.]+)', body_html)
@@ -91,6 +103,7 @@ def scrape_reinasex(category=1, max_pages=10, exclude_urls=None):
                         all_items.append({
                             "name": name,
                             "id": x_id if x_id else f"reina_{entry_id}",
+                            "is_placeholder_id": x_id is None,
                             "insta": insta_url,
                             "tiktok": tiktok_url,
                             "images": images,

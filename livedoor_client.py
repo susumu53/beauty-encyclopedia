@@ -34,7 +34,7 @@ class LivedoorClient:
             f'Created="{created}"'
         )
 
-    def post_article(self, title, content, category=None, draft=False):
+    def post_article(self, title, content, category=None, draft=False, thumbnail_url=None):
         """記事を投稿する"""
         headers = {
             'Authorization': 'WSSE profile="UsernameToken"',
@@ -44,6 +44,10 @@ class LivedoorClient:
         
         category_tag = f'<category scheme="http://livedoor.blogcms.jp/blog/{self.blog_id}/category" term="{category}" />' if category else ""
         draft_str = "yes" if draft else "no"
+        
+        thumbnail_tag = ""
+        if thumbnail_url:
+            thumbnail_tag = f'<link rel="enclosure" type="image/jpeg" href="{thumbnail_url}" />'
 
         entry_xml = f"""<?xml version="1.0" encoding="utf-8"?>
 <entry xmlns="http://www.w3.org/2005/Atom"
@@ -53,6 +57,7 @@ class LivedoorClient:
     {content}
   ]]></content>
   {category_tag}
+  {thumbnail_tag}
   <app:control>
     <app:draft>{draft_str}</app:draft>
   </app:control>
