@@ -8,6 +8,7 @@ from scraper import scrape_bi_girl_page
 from dmm_client import DMMClient
 from scraper_aru18 import scrape_aru18_top100
 import argparse
+import html
 
 # Windows環境でのエンコーディングエラー対策
 if sys.platform == "win32":
@@ -161,8 +162,8 @@ def process_posts(dry_run=False):
                 for d_item in dmm_items:
                     dmm_section += f"""
                     <div style='width: 45%;'>
-                        <a href='{d_item['url']}' target='_blank'>
-                            <img src='{d_item['image']}' style='width: 100%; border-radius: 5px;'>
+                        <a href='{html.escape(d_item['url'])}' target='_blank'>
+                            <img src='{html.escape(d_item['image'])}' style='width: 100%; border-radius: 5px;'>
                         </a>
                     </div>
                     """
@@ -189,11 +190,11 @@ def process_posts(dry_run=False):
         
         if has_insta:
             insta_id = item['insta'].rstrip('/').split('/')[-1]
-            sns_links_html += f'<a href="{item["insta"]}" target="_blank" style="background: linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%); color: #fff; padding: 10px 20px; border-radius: 30px; text-decoration: none; font-weight: bold; font-size: 14px;">Instagram</a>'
+            sns_links_html += f'<a href="{html.escape(item["insta"])}" target="_blank" style="background: linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%); color: #fff; padding: 10px 20px; border-radius: 30px; text-decoration: none; font-weight: bold; font-size: 14px;">Instagram</a>'
         
         if has_tiktok:
             tiktok_id = item['tiktok'].rstrip('/').split('/')[-1]
-            sns_links_html += f'<a href="{item["tiktok"]}" target="_blank" style="background: #010101; color: #fff; padding: 10px 20px; border-radius: 30px; text-decoration: none; font-weight: bold; font-size: 14px;">TikTok</a>'
+            sns_links_html += f'<a href="{html.escape(item["tiktok"])}" target="_blank" style="background: #010101; color: #fff; padding: 10px 20px; border-radius: 30px; text-decoration: none; font-weight: bold; font-size: 14px;">TikTok</a>'
         sns_links_html += '</div>'
         
         # 画像セクションの構築 (Instagram風グリッド)
@@ -204,13 +205,13 @@ def process_posts(dry_run=False):
             
         if images:
             if len(images) == 1:
-                image_html = f'<div style="margin: 15px 0;"><img src="{images[0]}" style="max-width: 100%; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"></div>'
+                image_html = f'<div style="margin: 15px 0;"><img src="{html.escape(images[0])}" style="max-width: 100%; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"></div>'
             else:
                 # 複数画像の場合は Flexbox でグリッド表示
                 flex_style = "display: flex; flex-wrap: wrap; gap: 4px; margin: 15px 0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"
                 image_items_html = ""
                 for img_url in images[:12]: # 最大12枚
-                    image_items_html += f'<div style="width: calc(33.33% - 3px); aspect-ratio: 1/1;"><img src="{img_url}" style="width: 100%; height: 100%; object-fit: cover; display: block;"></div>'
+                    image_items_html += f'<div style="width: calc(33.33% - 3px); aspect-ratio: 1/1;"><img src="{html.escape(img_url)}" style="width: 100%; height: 100%; object-fit: cover; display: block;"></div>'
                 image_html = f'<div style="{flex_style}">{image_items_html}</div>'
 
         # サムネイル（一番最初の画像）
@@ -222,11 +223,11 @@ def process_posts(dry_run=False):
             insta_embed = f'''
             <div style="margin: 20px 0; display: flex; justify-content: center;">
                 <blockquote class="instagram-media" 
-                            data-instgrm-permalink="{item["insta"]}" 
+                            data-instgrm-permalink="{html.escape(item["insta"])}" 
                             data-instgrm-version="14" 
                             style="background:#FFF; border:0; border-radius:3px; box-shadow:0 0 1px 0 rgba(0,0,0,0.5),0 1px 10px 0 rgba(0,0,0,0.15); margin: 1px; max-width:540px; min-width:326px; padding:0; width:99.375%; width:calc(100% - 2px);">
                     <div style="padding:16px;">
-                        <a href="{item["insta"]}" style="background:#FFFFFF; line-height:0; padding:0 0; text-align:center; text-decoration:none; width:100%;" target="_blank">
+                        <a href="{html.escape(item["insta"])}" style="background:#FFFFFF; line-height:0; padding:0 0; text-align:center; text-decoration:none; width:100%;" target="_blank">
                             View this post on Instagram
                         </a>
                     </div>
