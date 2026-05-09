@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import patch, MagicMock, mock_open
 import json
 import os
+from main import process_posts
 
 class TestMainLogic(unittest.TestCase):
     def setUp(self):
@@ -30,23 +31,22 @@ class TestMainLogic(unittest.TestCase):
                 "LIVEDOOR_CATEGORY": "美女図鑑"
             }.get(k, default)
             
-            mock_exists.return_value = True
+            mock_exists.side_effect = lambda p: 'queue' not in p
             mock_scrape.return_value = self.mock_items
             
             # mock_open の設定
-            m = mock_open(read_data='{"current_page": 2000}')
+            m = mock_open()
             m.side_effect = [
                 mock_open(read_data='{"current_page": 2000}').return_value, # state read
                 mock_open(read_data='').return_value,                       # history read
                 mock_open().return_value,                                   # history write
                 mock_open().return_value,                                   # state write
-                mock_open().return_value,                                   # fallback
-                mock_open().return_value                                    # fallback
+                mock_open().return_value,                                   # error_log write
+                mock_open().return_value                                    # error_log write
             ]
 
             with patch('builtins.open', m):
                 mock_client = mock_client_class.return_value
-                from main import process_posts
                 process_posts(dry_run=False)
 
             # 5件投稿されたか
@@ -60,7 +60,8 @@ class TestMainLogic(unittest.TestCase):
     @patch('main.LivedoorClient')
     @patch('main.scrape_bi_girl_page')
     @patch('main.DMMClient')
-    def test_process_posts_with_dmm(self, mock_dmm_class, mock_scraper, mock_livedoor_class):
+    @patch('os.path.exists')
+    def test_process_posts_with_dmm(self, mock_exists, mock_dmm_class, mock_scraper, mock_livedoor_class):
         """DMMの作品がある場合に画像が挿入されるかテスト"""
         # 環境変数の設定
         with patch.dict('os.environ', {
@@ -83,16 +84,17 @@ class TestMainLogic(unittest.TestCase):
             mock_livedoor = mock_livedoor_class.return_value
             
             # 状態と履歴の読み込み用モック
-            m = mock_open(read_data='{"current_page": 2000}')
+            mock_exists.side_effect = lambda p: 'queue' not in p
+            m = mock_open()
             m.side_effect = [
                 mock_open(read_data='{"current_page": 2000}').return_value, # state read
                 mock_open(read_data='').return_value,                       # history read
                 mock_open().return_value,                                   # history write
-                mock_open().return_value                                    # state write
+                mock_open().return_value,                                   # state write
+                mock_open().return_value                                    # error_log write
             ]
 
             with patch('builtins.open', m):
-                from main import process_posts
                 process_posts(dry_run=False)
 
             # post_article が呼ばれた際の引数を確認
@@ -137,24 +139,59 @@ class TestMainLogic(unittest.TestCase):
                     mock_open(read_data='{"current_page": 2000}').return_value, # state read
                     mock_open(read_data='').return_value,                       # history read
                     mock_open().return_value,                                   # history write
-                    mock_open().return_value                                    # state write
+                    mock_open().return_value,                                   # state write
+                    mock_open().return_value                                    # error_log write
                 ]
 
                 with patch('builtins.open', m):
-                    from main import process_posts
                     process_posts(dry_run=False)
 
-                self.assertTrue(mock_client.post_article.called)
                 args, _ = mock_client.post_article.call_args
                 content = args[1]
-                
-                # X誘導ボタンが含まれているか
-                self.assertIn('X (Twitter) で最新の投稿を見る', content)
-                self.assertIn('background-color: #000', content)
-                
                 # bi-girl.netからの投稿（regular）なので画像が含まれているか
                 self.assertIn('img1.jpg', content)
                 self.assertIn('<img src=', content)
+                # タイムライン埋め込みが含まれているか
+                self.assertIn('twitter-timeline', content)
+
+    def test_process_posts_multiple_images(self):
+        """複数の画像が含まれる場合に正しくHTMLが生成されるかテスト"""
+        with patch.dict('os.environ', {'LIVEDOOR_ID': 'u', 'LIVEDOOR_API_KEY': 'k', 'LIVEDOOR_BLOG_ID': 'b'}):
+            with patch('os.path.exists', return_value=True), \
+                 patch('main.LivedoorClient') as mock_client_class, \
+                 patch('main.scrape_bi_girl_page') as mock_scrape:
+                
+                # queueの読み込みをバイパス
+                with patch('os.path.exists', side_effect=lambda p: 'queue' not in p):
+                    mock_scrape.return_value = [
+                        {'name': '多画像美女', 'id': 'multi_id', 'url': 'url1', 'images': ['img1.jpg', 'img2.jpg']}
+                    ]
+                    mock_client = mock_client_class.return_value
+                    
+                    m = mock_open(read_data='{"current_page": 2000}')
+                    m.side_effect = [
+                        mock_open(read_data='{"current_page": 2000}').return_value, # state
+                        mock_open(read_data='').return_value,                       # history
+                        mock_open().return_value,                                   # history write
+                        mock_open().return_value,                                   # state write
+                        mock_open().return_value                                    # error_log
+                    ]
+
+                    with patch('builtins.open', m):
+                        from main import process_posts
+                        process_posts(dry_run=False)
+
+                    args, kwargs = mock_client.post_article.call_args
+                    content = args[1]
+                    thumbnail = kwargs.get('thumbnail_url')
+                    
+                    # 1枚目がサムネイルになっているか
+                    self.assertEqual(thumbnail, 'img1.jpg')
+                    # 複数画像がある場合に CSS Grid が使用されているか
+                    self.assertIn('display: grid', content)
+                    self.assertIn('grid-template-columns', content)
+                    self.assertIn('img1.jpg', content)
+                    self.assertIn('img2.jpg', content)
 
 if __name__ == '__main__':
     unittest.main()

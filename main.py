@@ -183,31 +183,36 @@ def process_posts(dry_run=False):
             history.add(item['id'].lower())
             continue
 
-        # SNSリンクの構築
-        sns_links_html = ""
+        # SNSリンクの構築 (プレミアムなボタン風デザイン)
+        sns_links_html = '<div style="margin: 20px 0; display: flex; flex-wrap: wrap; gap: 10px;">'
         if has_x:
-            sns_links_html += f'<p style="font-size: 24px; font-weight: bold; margin: 20px 0;">🐦 X (Twitter)：<a href="https://x.com/{item["id"]}" target="_blank" style="font-size: 24px;">@{item["id"]}</a></p>'
+            sns_links_html += f'<a href="https://x.com/{item["id"]}" target="_blank" style="background: #000; color: #fff; padding: 10px 20px; border-radius: 30px; text-decoration: none; font-weight: bold; font-size: 14px;">X (Twitter)</a>'
         
         if has_insta:
             insta_id = item['insta'].rstrip('/').split('/')[-1]
-            sns_links_html += f'<p style="font-size: 24px; font-weight: bold; margin: 20px 0;">📸 Instagram：<a href="{item["insta"]}" target="_blank" style="font-size: 24px;">@{insta_id}</a></p>'
+            sns_links_html += f'<a href="{item["insta"]}" target="_blank" style="background: linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%); color: #fff; padding: 10px 20px; border-radius: 30px; text-decoration: none; font-weight: bold; font-size: 14px;">Instagram</a>'
         
         if has_tiktok:
             tiktok_id = item['tiktok'].rstrip('/').split('/')[-1]
-            sns_links_html += f'<p style="font-size: 24px; font-weight: bold; margin: 20px 0;">🎵 TikTok：<a href="{item["tiktok"]}" target="_blank" style="font-size: 24px;">{tiktok_id}</a></p>'
+            sns_links_html += f'<a href="{item["tiktok"]}" target="_blank" style="background: #010101; color: #fff; padding: 10px 20px; border-radius: 30px; text-decoration: none; font-weight: bold; font-size: 14px;">TikTok</a>'
+        sns_links_html += '</div>'
         
-        # 画像セクションの構築 (直リンク可能な場合)
+        # 画像セクションの構築 (Instagram風グリッド)
         image_html = ""
         images = item.get('images', [])
         if not images and item.get('image_url'):
             images = [item['image_url']]
-        
-        # 2ntなどの特定の画像を除外していた制限を解除
+            
         if images:
-            image_html = "<div style='margin: 15px 0;'>"
-            for img_url in images[:3]: # 最大3枚を表示
-                image_html += f'<p><img src="{img_url}" style="max-width: 100%; border-radius: 8px; margin-bottom: 10px;"></p>'
-            image_html += "</div>"
+            if len(images) == 1:
+                image_html = f'<div style="margin: 15px 0;"><img src="{images[0]}" style="max-width: 100%; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"></div>'
+            else:
+                # 複数画像の場合はグリッド表示
+                grid_style = "display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin: 15px 0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"
+                image_items_html = ""
+                for img_url in images[:9]: # 最大9枚
+                    image_items_html += f'<img src="{img_url}" style="aspect-ratio: 1/1; object-fit: cover; width: 100%; display: block;">'
+                image_html = f'<div style="{grid_style}">{image_items_html}</div>'
 
         # サムネイル（一番最初の画像）
         thumbnail_url = images[0] if images else None
