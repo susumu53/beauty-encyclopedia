@@ -4,6 +4,8 @@ import json
 import os
 import re
 
+from scraper_image_search import search_bing_images
+
 def scrape_lifecolle():
     url = "https://www.lifecolle.com/instagram-bijyo/"
     headers = {
@@ -19,65 +21,69 @@ def scrape_lifecolle():
         return []
     
     soup = BeautifulSoup(res.text, "html.parser")
-    # 記事本文のコンテナを探す
     content = soup.select_one(".entry-content")
     if not content:
         print("Could not find entry-content")
         return []
         
     items = []
-    # h3タグが各美人のセクション
     h3_tags = content.find_all("h3")
     
     for h3 in h3_tags:
         name = h3.get_text(strip=True)
-        # 次の要素からInstagramリンクと画像を探す
         insta_url = ""
+        profile_url = ""
+        username = ""
         images = []
         
-        # 記事全体の代表画像をデフォルトとして保持
         fallback_img = "https://www.lifecolle.com/wp-content/uploads/2021/05/6227e9ce70d9a9e331d381333e02648c.png"
         
         curr = h3.find_next_sibling()
-        # 次のh3か、要素がなくなるまでループ
         while curr and curr.name != "h3":
-            # Instagramリンクの抽出
-            if not insta_url:
-                links = curr.find_all("a", href=re.compile(r"instagram\.com/"))
-                for link in links:
-                    href = link.get("href", "")
-                    # 投稿URL (/p/...) ではなくプロフィールURLを優先
-                    if "/p/" not in href and "/reels/" not in href:
-                        insta_url = href.split("?")[0].rstrip("/")
-                        break
-                    elif not insta_url: # 投稿URLしかない場合はとりあえず保持
-                        insta_url = href.split("?")[0].rstrip("/")
+            links = curr.find_all("a", href=re.compile(r"instagram\.com/"))
+            for link in links:
+                href = link.get("href", "").split("?")[0].rstrip("/")
+                if "/p/" not in href and "/reels/" not in href:
+                    profile_url = href
+                    username = href.split("/")[-1]
+                elif not insta_url:
+                    insta_url = href
             
-            # 画像の抽出
+            embed = curr.find("blockquote", class_="instagram-media")
+            if embed and embed.has_attr("data-instgrm-permalink"):
+                insta_url = embed["data-instgrm-permalink"].split("?")[0].rstrip("/")
+            
             img_tags = curr.find_all("img")
             for img in img_tags:
                 src = img.get("src") or img.get("data-src")
                 if src and "http" in src and "avatar" not in src.lower():
-                    # 特定のアイコンや小さい画像を除外
                     if "lazy" not in src:
                         images.append(src)
             
             curr = curr.find_next_sibling()
             
-        if insta_url:
-            insta_id = insta_url.split("/")[-1]
+        if username:
+            final_insta_url = insta_url if insta_url else profile_url
+            
+            # Bing画像検索で画像を補強 (名前で検索)
+            # 画像が少ない場合に補強する
+            if len(images) < 12:
+                safe_name = name.encode('ascii', 'ignore').decode('ascii') or "Beauty"
+                print(f"Supplementing images for {safe_name} using Bing...")
+                bing_images = search_bing_images(f"{name} 高画質 ポートレート", limit=12 - len(images))
+                images.extend(bing_images)
+
             if not images:
                 images.append(fallback_img)
                 
-            # IDが数字などの場合はスキップするか検討が必要だが、基本的には保存
             items.append({
                 "name": name,
-                "id": insta_id,
-                "insta": insta_url,
-                "images": list(dict.fromkeys(images))[:5], # 重複排除して最大5枚
+                "id": username,
+                "insta": final_insta_url,
+                "images": list(dict.fromkeys(images))[:12], # 最大12枚
                 "url": url,
                 "source": "lifecolle",
-                "source_type": "priority" # 新規ソースなので優先的に
+                "source_type": "priority"
             })
             
     print(f"Extracted {len(items)} items from lifecolle")
@@ -102,16 +108,32 @@ def update_queue(new_items):
     existing_ids = set(item["id"].lower() for item in queue["items"])
     
     added_count = 0
+    updated_count = 0
     for item in new_items:
-        if item["id"].lower() not in history and item["id"].lower() not in existing_ids:
-            queue["items"].append(item)
-            existing_ids.add(item["id"].lower())
-            added_count += 1
+        if item["id"].lower() not in history:
+            # 既存のキューを検索
+            existing_item = next((i for i in queue["items"] if i["id"].lower() == item["id"].lower()), None)
+            
+            if existing_item:
+                # 投稿URLが見つかった場合、または画像数が増えた場合にアップグレード
+                should_update = False
+                if "/p/" in item["insta"] and "/p/" not in existing_item.get("insta", ""):
+                    should_update = True
+                if len(item["images"]) > len(existing_item.get("images", [])):
+                    should_update = True
+                
+                if should_update:
+                    existing_item["insta"] = item["insta"]
+                    existing_item["images"] = item["images"]
+                    updated_count += 1
+            else:
+                queue["items"].append(item)
+                added_count += 1
             
     with open(queue_file, "w", encoding="utf-8") as f:
         json.dump(queue, f, ensure_ascii=False, indent=2)
         
-    print(f"Added {added_count} new items to {queue_file}")
+    print(f"Added {added_count} new items, Updated {updated_count} existing items to {queue_file}")
 
 if __name__ == "__main__":
     items = scrape_lifecolle()

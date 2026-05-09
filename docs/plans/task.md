@@ -1,7 +1,9 @@
-# タスク進捗管理
+# Task Tracker: Instagram Grid and Twitter Fix
 
-| タスク | 状況 | 完了日 |
+| Task | Description | Status |
 | :--- | :--- | :--- |
-| Task 1: DMMClientの実装 (DMM.com 検索) | ✅ 完了 | 2026-05-02 |
-| Task 2: DMMClientの拡張 (FANZA 検索 & マージ) | ✅ 完了 | 2026-05-02 |
-| Task 3: main.py への統合 | ✅ 完了 | 2026-05-02 |
+| 1 | Update bi-girl.net scraper for multiple images | Completed |
+| 2 | Update main.py to handle unified image data | Completed |
+| 3 | Implement CSS Grid for Instagram-style image display | Completed |
+| 4 | Fix Twitter Embedding Logic | Completed |
+| 5 | Final Layout Polish and SNS Buttons | Completed |

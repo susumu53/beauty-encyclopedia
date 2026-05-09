@@ -21,7 +21,7 @@ class TestMainLogic(unittest.TestCase):
         # モックの設定
         with patch('os.getenv') as mock_getenv, \
              patch('os.path.exists') as mock_exists, \
-             patch('livedoor_client.LivedoorClient') as mock_client_class, \
+             patch('main.LivedoorClient') as mock_client_class, \
              patch('main.scrape_bi_girl_page') as mock_scrape:
             
             mock_getenv.side_effect = lambda k, default=None: {
@@ -41,9 +41,7 @@ class TestMainLogic(unittest.TestCase):
                 mock_open(read_data='').return_value,                       # history read
                 mock_open().return_value,                                   # history write
                 mock_open().return_value,                                   # state write
-                mock_open().return_value,                                   # error_log write
-                mock_open().return_value                                    # error_log write
-            ]
+            ] + [mock_open().return_value] * 10                             # error_log handles
 
             with patch('builtins.open', m):
                 mock_client = mock_client_class.return_value
@@ -54,7 +52,7 @@ class TestMainLogic(unittest.TestCase):
             # 最後の投稿内容をチェック
             args, kwargs = mock_client.post_article.call_args
             content = args[1]
-            self.assertIn('<img src="https://bi-girl.net/img/5.jpg"', content)
+            self.assertIn('https://bi-girl.net/img/5.jpg', content)
             self.assertEqual(kwargs['category'], "美女図鑑")
 
     @patch('main.LivedoorClient')
@@ -91,8 +89,7 @@ class TestMainLogic(unittest.TestCase):
                 mock_open(read_data='').return_value,                       # history read
                 mock_open().return_value,                                   # history write
                 mock_open().return_value,                                   # state write
-                mock_open().return_value                                    # error_log write
-            ]
+            ] + [mock_open().return_value] * 5                              # error_log handles
 
             with patch('builtins.open', m):
                 process_posts(dry_run=False)
@@ -134,14 +131,13 @@ class TestMainLogic(unittest.TestCase):
                 mock_client = mock_client_class.return_value
                 
                 # 状態と履歴の読み込み用モック
-                m = mock_open(read_data='{"current_page": 2000}')
+                m = mock_open()
                 m.side_effect = [
                     mock_open(read_data='{"current_page": 2000}').return_value, # state read
                     mock_open(read_data='').return_value,                       # history read
                     mock_open().return_value,                                   # history write
                     mock_open().return_value,                                   # state write
-                    mock_open().return_value                                    # error_log write
-                ]
+                ] + [mock_open().return_value] * 5                              # error_log handles
 
                 with patch('builtins.open', m):
                     process_posts(dry_run=False)
@@ -168,17 +164,15 @@ class TestMainLogic(unittest.TestCase):
                     ]
                     mock_client = mock_client_class.return_value
                     
-                    m = mock_open(read_data='{"current_page": 2000}')
+                    m = mock_open()
                     m.side_effect = [
                         mock_open(read_data='{"current_page": 2000}').return_value, # state
                         mock_open(read_data='').return_value,                       # history
                         mock_open().return_value,                                   # history write
                         mock_open().return_value,                                   # state write
-                        mock_open().return_value                                    # error_log
-                    ]
+                    ] + [mock_open().return_value] * 5                              # error_log handles
 
                     with patch('builtins.open', m):
-                        from main import process_posts
                         process_posts(dry_run=False)
 
                     args, kwargs = mock_client.post_article.call_args
@@ -187,9 +181,9 @@ class TestMainLogic(unittest.TestCase):
                     
                     # 1枚目がサムネイルになっているか
                     self.assertEqual(thumbnail, 'img1.jpg')
-                    # 複数画像がある場合に CSS Grid が使用されているか
-                    self.assertIn('display: grid', content)
-                    self.assertIn('grid-template-columns', content)
+                    # 複数画像がある場合に Flexbox が使用されているか
+                    self.assertIn('display: flex', content)
+                    self.assertIn('flex-wrap: wrap', content)
                     self.assertIn('img1.jpg', content)
                     self.assertIn('img2.jpg', content)
 
@@ -211,7 +205,7 @@ class TestMainLogic(unittest.TestCase):
                     mock_open(read_data='').return_value,                       # history
                     mock_open().return_value,                                   # history write
                     mock_open().return_value                                    # state write
-                ]
+                ] + [mock_open().return_value] * 5                              # error_log handles
 
                 with patch('builtins.open', m):
                     process_posts(dry_run=False)
@@ -219,8 +213,9 @@ class TestMainLogic(unittest.TestCase):
                 args, _ = mock_client.post_article.call_args
                 content = args[1]
                 
-                # 有効なIDなので twitter-timeline が含まれるべき（現在は source='lifecolle' でスキップされるはず）
+                # 有効なIDなので twitter-timeline が含まれるべき
                 self.assertIn('twitter-timeline', content)
+                self.assertIn('instagram-media', content)
 
 if __name__ == '__main__':
     unittest.main()

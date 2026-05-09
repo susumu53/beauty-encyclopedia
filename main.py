@@ -206,15 +206,33 @@ def process_posts(dry_run=False):
             if len(images) == 1:
                 image_html = f'<div style="margin: 15px 0;"><img src="{images[0]}" style="max-width: 100%; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"></div>'
             else:
-                # 複数画像の場合はグリッド表示
-                grid_style = "display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin: 15px 0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"
+                # 複数画像の場合は Flexbox でグリッド表示
+                flex_style = "display: flex; flex-wrap: wrap; gap: 4px; margin: 15px 0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"
                 image_items_html = ""
-                for img_url in images[:9]: # 最大9枚
-                    image_items_html += f'<img src="{img_url}" style="aspect-ratio: 1/1; object-fit: cover; width: 100%; display: block;">'
-                image_html = f'<div style="{grid_style}">{image_items_html}</div>'
+                for img_url in images[:12]: # 最大12枚
+                    image_items_html += f'<div style="width: calc(33.33% - 3px); aspect-ratio: 1/1;"><img src="{img_url}" style="width: 100%; height: 100%; object-fit: cover; display: block;"></div>'
+                image_html = f'<div style="{flex_style}">{image_items_html}</div>'
 
         # サムネイル（一番最初の画像）
         thumbnail_url = images[0] if images else None
+
+        # Instagram埋め込みの構築
+        insta_embed = ""
+        if has_insta:
+            insta_embed = f'''
+            <div style="margin: 20px 0; display: flex; justify-content: center;">
+                <blockquote class="instagram-media" 
+                            data-instgrm-permalink="{item["insta"]}" 
+                            data-instgrm-version="14" 
+                            style="background:#FFF; border:0; border-radius:3px; box-shadow:0 0 1px 0 rgba(0,0,0,0.5),0 1px 10px 0 rgba(0,0,0,0.15); margin: 1px; max-width:540px; min-width:326px; padding:0; width:99.375%; width:calc(100% - 2px);">
+                    <div style="padding:16px;">
+                        <a href="{item["insta"]}" style="background:#FFFFFF; line-height:0; padding:0 0; text-align:center; text-decoration:none; width:100%;" target="_blank">
+                            View this post on Instagram
+                        </a>
+                    </div>
+                </blockquote>
+            </div>
+            '''
 
         # X (Twitter) タイムライン埋め込み
         x_embed_html = ""
@@ -228,7 +246,6 @@ def process_posts(dry_run=False):
                    href="https://twitter.com/{item['id']}?ref_src=twsrc%5Etfw">
                    Tweets by {item['id']}
                 </a>
-                <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
             </div>
             """
 
@@ -249,6 +266,7 @@ def process_posts(dry_run=False):
         <p>アカウント名：{item['name']}</p>
         {sns_links_html}
         {image_html}
+        {insta_embed}
         {x_embed_html}
         {dmm_section}
         <p style="margin-top: 20px;"><a href="{item_url}" target="_blank" style="color: #666; font-size: 12px;">引用元表示</a></p>
