@@ -5,15 +5,13 @@ from scraper import scrape_bi_girl_page
 class TestScraper(unittest.TestCase):
     @patch('requests.get')
     def test_scrape_bi_girl_page(self, mock_get):
-        """一覧ページから情報を正しく抽出できるかテスト（実際のHTML構造に合わせたセレクタ）"""
+        """一覧ページから情報を正しく抽出できるかテスト（複数画像対応）"""
         sample_html = """
         <div class="img_wrapper_inner">
-            <div class="all_tweet_profile_img">
-                <img data-src="https://bi-girl.net/icon1.jpg" />
-            </div>
             <div class="img_frame">
                 <a class="img_a img_all">
                     <img data-src="https://bi-girl.net/main1.jpg" />
+                    <img src="https://bi-girl.net/main2.jpg" />
                 </a>
             </div>
             <div class="all_tweet_profile_name">日暮りん</div>
@@ -29,7 +27,10 @@ class TestScraper(unittest.TestCase):
         results = scrape_bi_girl_page(2)
 
         self.assertEqual(len(results), 1)
-        self.assertEqual(results[0]['image_url'], 'https://bi-girl.net/main1.jpg')
+        # image_url ではなく images リストを期待
+        self.assertIn('https://bi-girl.net/main1.jpg', results[0]['images'])
+        self.assertIn('https://bi-girl.net/main2.jpg', results[0]['images'])
+        self.assertEqual(len(results[0]['images']), 2)
 
 if __name__ == '__main__':
     unittest.main()

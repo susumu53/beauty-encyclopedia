@@ -19,22 +19,25 @@ def scrape_bi_girl_page(page_num):
         try:
             name_el   = card.select_one('.all_tweet_profile_name')
             id_el     = card.select_one('.all_tweet_profile_screenName')
-            # メイン画像は .img_a の中にある。最初の img だとアイコンになる場合がある
-            img_el    = card.select_one('.img_a img')
+            # メイン画像セクション (.img_a) 内の全ての画像を取得
+            img_container = card.select_one('.img_a')
+            images = []
+            if img_container:
+                img_tags = img_container.find_all('img')
+                for img in img_tags:
+                    src = img.get('data-src') or img.get('src')
+                    if src and 'avatar' not in src.lower():
+                        images.append(src)
+            
             tweet_link_el = card.find('a', href=lambda h: h and ('x.com' in h or 'twitter.com' in h) and '/status/' in h)
             
             if name_el and id_el and tweet_link_el:
                 raw_id = id_el.text.strip().lstrip('@')
-                # lazyloadされている場合は data-src にURLがある
-                image_url = None
-                if img_el:
-                    image_url = img_el.get('data-src') or img_el.get('src')
-                
                 results.append({
                     "name": name_el.text.strip(),
                     "id":   raw_id,
                     "url":  tweet_link_el['href'],
-                    "image_url": image_url
+                    "images": images
                 })
         except Exception as e:
             print(f"Error parsing card: {e}")
