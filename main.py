@@ -2,6 +2,7 @@ import sys
 import os
 import json
 import datetime
+import re
 from livedoor_client import LivedoorClient
 from scraper import scrape_bi_girl_page
 from dmm_client import DMMClient
@@ -168,12 +169,10 @@ def process_posts(dry_run=False):
                 dmm_section += "</div>"
 
         # SNSリンクの存在確認
-        # lifecolle, yuuzuki は Instagram がメインなので X は無しとする
-        is_placeholder_x = item.get('is_placeholder_id', False) or \
-                          (item.get('source') == 'reinasex' and item['id'].startswith('reina_')) or \
-                          (item.get('source') in ['lifecolle', 'yuuzuki'])
-        
-        has_x = not is_placeholder_x
+        # IDが英数字のみ（Twitter IDの形式）かつ、プレースホルダでない場合にXを表示
+        is_valid_x_id = bool(re.match(r'^[a-zA-Z0-9_]+$', item['id'])) and not item.get('is_placeholder_id', False)
+        # reinasexの暫定ID（reina_...）でなければ、どのソースでも有効なIDならXを表示するように緩和
+        has_x = is_valid_x_id and not item['id'].startswith('reina_')
         has_insta = bool(item.get('insta'))
         has_tiktok = bool(item.get('tiktok'))
         

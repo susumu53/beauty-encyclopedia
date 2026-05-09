@@ -193,5 +193,34 @@ class TestMainLogic(unittest.TestCase):
                     self.assertIn('img1.jpg', content)
                     self.assertIn('img2.jpg', content)
 
+    def test_process_posts_twitter_fix(self):
+        """特定のソース（lifecolle等）でも有効なTwitter IDがあれば埋め込まれるかテスト"""
+        with patch.dict('os.environ', {'LIVEDOOR_ID': 'u', 'LIVEDOOR_API_KEY': 'k', 'LIVEDOOR_BLOG_ID': 'b'}):
+            with patch('os.path.exists', side_effect=lambda p: 'queue' not in p), \
+                 patch('main.LivedoorClient') as mock_client_class, \
+                 patch('main.scrape_bi_girl_page') as mock_scrape:
+                
+                mock_scrape.return_value = [
+                    {'name': 'テスト美女', 'id': 'valid_twitter_id', 'url': 'url1', 'source': 'lifecolle', 'insta': 'insta_url'}
+                ]
+                mock_client = mock_client_class.return_value
+                
+                m = mock_open()
+                m.side_effect = [
+                    mock_open(read_data='{"current_page": 2000}').return_value, # state
+                    mock_open(read_data='').return_value,                       # history
+                    mock_open().return_value,                                   # history write
+                    mock_open().return_value                                    # state write
+                ]
+
+                with patch('builtins.open', m):
+                    process_posts(dry_run=False)
+
+                args, _ = mock_client.post_article.call_args
+                content = args[1]
+                
+                # 有効なIDなので twitter-timeline が含まれるべき（現在は source='lifecolle' でスキップされるはず）
+                self.assertIn('twitter-timeline', content)
+
 if __name__ == '__main__':
     unittest.main()
