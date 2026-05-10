@@ -3,9 +3,12 @@ from unittest.mock import patch, MagicMock
 from scraper import scrape_bi_girl_page
 
 class TestScraper(unittest.TestCase):
-    @patch('requests.get')
-    def test_scrape_bi_girl_page(self, mock_get):
+    @patch('scraper.requests.get')
+    @patch('scraper.search_bing_images')
+    def test_scrape_bi_girl_page(self, mock_bing, mock_get):
         """一覧ページから情報を正しく抽出できるかテスト（複数画像対応）"""
+        # Bing検索が補強画像を返さないように設定（基本機能のテストのため）
+        mock_bing.return_value = []
         sample_html = """
         <div class="img_wrapper_inner">
             <div class="img_frame">

@@ -70,11 +70,15 @@ def scrape_ranking_net(max_pages=5):
                     else:
                         tiktok_url = ""
                     
+                    # 画像取得 (Bing停止中)
+                    images = []
+                    
                     items.append({
                         "name": name,
                         "id": x_id,
                         "insta": insta_url,
-                        "tiktok": tiktok_url
+                        "tiktok": tiktok_url,
+                        "images": images
                     })
             except Exception as je:
                 print(f"Error parsing JSON data: {je}")

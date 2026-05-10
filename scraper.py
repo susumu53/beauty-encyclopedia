@@ -28,13 +28,16 @@ def scrape_bi_girl_page(page_num):
                     src = img.get('data-src') or img.get('src')
                     if src and 'avatar' not in src.lower():
                         images.append(src)
+                    if len(images) >= 12:
+                        break
             
             tweet_link_el = card.find('a', href=lambda h: h and ('x.com' in h or 'twitter.com' in h) and '/status/' in h)
             
             if name_el and id_el and tweet_link_el:
+                name = name_el.text.strip()
                 raw_id = id_el.text.strip().lstrip('@')
                 results.append({
-                    "name": name_el.text.strip(),
+                    "name": name,
                     "id":   raw_id,
                     "url":  tweet_link_el['href'],
                     "images": images

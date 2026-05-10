@@ -181,9 +181,9 @@ class TestMainLogic(unittest.TestCase):
                     
                     # 1枚目がサムネイルになっているか
                     self.assertEqual(thumbnail, 'img1.jpg')
-                    # 複数画像がある場合に Flexbox が使用されているか
-                    self.assertIn('display: flex', content)
-                    self.assertIn('flex-wrap: wrap', content)
+                    # 複数画像がある場合に CSS Grid が使用されているか
+                    self.assertIn('display: grid', content)
+                    self.assertIn('grid-template-columns: repeat(3, 1fr)', content)
                     self.assertIn('img1.jpg', content)
                     self.assertIn('img2.jpg', content)
 

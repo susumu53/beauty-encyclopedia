@@ -169,6 +169,14 @@ def process_posts(dry_run=False):
                     """
                 dmm_section += "</div>"
 
+        # 画像が少ない場合の処理 (Bing補強は停止中)
+        images = item.get('images', [])
+        if not images and item.get('image_url'):
+            images = [item['image_url']]
+        
+        # アイテムの画像を更新
+        item['images'] = images
+
         # SNSリンクの存在確認
         # IDが英数字のみ（Twitter IDの形式）かつ、プレースホルダでない場合にXを表示
         is_valid_x_id = bool(re.match(r'^[a-zA-Z0-9_]+$', item['id'])) and not item.get('is_placeholder_id', False)
@@ -207,12 +215,12 @@ def process_posts(dry_run=False):
             if len(images) == 1:
                 image_html = f'<div style="margin: 15px 0;"><img src="{html.escape(images[0])}" style="max-width: 100%; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"></div>'
             else:
-                # 複数画像の場合は Flexbox でグリッド表示
-                flex_style = "display: flex; flex-wrap: wrap; gap: 4px; margin: 15px 0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"
+                # 複数画像の場合は CSS Grid で表示
+                grid_style = "display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin: 15px 0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"
                 image_items_html = ""
                 for img_url in images[:12]: # 最大12枚
-                    image_items_html += f'<div style="width: calc(33.33% - 3px); aspect-ratio: 1/1;"><img src="{html.escape(img_url)}" style="width: 100%; height: 100%; object-fit: cover; display: block;"></div>'
-                image_html = f'<div style="{flex_style}">{image_items_html}</div>'
+                    image_items_html += f'<img src="{html.escape(img_url)}" style="width: 100%; aspect-ratio: 1/1; object-fit: cover; display: block;">'
+                image_html = f'<div style="{grid_style}">{image_items_html}</div>'
 
         # サムネイル（一番最初の画像）
         thumbnail_url = images[0] if images else None
@@ -293,6 +301,13 @@ def process_posts(dry_run=False):
                     posted_priority_ids.append(item['id'].lower())
                 else:
                     posted_regular_count += 1
+                
+                # 投稿成功ごとに履歴を保存 (信頼性向上)
+                with open(history_path, 'w', encoding='utf-8') as f:
+                    for hid in sorted(history):
+                        f.write(f"{hid}\n")
+                print(f"Successfully posted and updated history for {item['id']}")
+
             except Exception as e:
                 error_msg = f"Failed to post {item.get('id', 'unknown')}: {e}"
                 print(error_msg)
@@ -318,6 +333,9 @@ def process_posts(dry_run=False):
             if all_known:
                 state['current_page'] = current_page - 1
                 print(f"Moving to next page: {state['current_page']}")
+                # 状態を保存
+                with open(state_path, 'w', encoding='utf-8') as f:
+                    json.dump(state, f, indent=2)
         
         # 履歴の保存
         with open(history_path, 'w', encoding='utf-8') as f:

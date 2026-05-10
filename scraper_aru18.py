@@ -62,6 +62,10 @@ def scrape_aru18_top100():
     for item in items:
         if item['id'] not in seen:
             seen.add(item['id'])
+            
+            # 画像取得 (Bing停止中)
+            item['images'] = []
+                
             unique_items.append(item)
             
     return unique_items

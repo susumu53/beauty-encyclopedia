@@ -5,6 +5,30 @@ import time
 import json
 import os
 
+def clean_name(name):
+    """
+    名前から不要な文言やSNSIDを削除する
+    """
+    if not name:
+        return ""
+    
+    # 不要な文言の削除
+    removals = [
+        'SNSアカウント情報', 'きれいなお姉さん無修正', '【', '】', 
+        ' - ', '－', '公式'
+    ]
+    for r in removals:
+        name = name.replace(r, '')
+        
+    # (@handle) のようなパターンを削除
+    name = re.sub(r'[（(][@＠][a-zA-Z0-9_]+[)）]', '', name)
+    # @handle のようなパターンを削除
+    name = re.sub(r'[@＠][a-zA-Z0-9_]+', '', name)
+    
+    # 残った括弧を削除
+    name = name.rstrip('(').rstrip('（').strip()
+    return name
+
 def scrape_reinasex(category=1, max_pages=10, exclude_urls=None):
     """
     ReinaSexブログのカテゴリ一覧ページから直接情報を取得する（詳細ページへの遷移なし）
@@ -49,10 +73,8 @@ def scrape_reinasex(category=1, max_pages=10, exclude_urls=None):
                     if x_title_match:
                         x_id_in_title = x_title_match.group(1)
 
-                    # 「きれいなお姉さん無修正」などの不要な文言を削除
-                    name = title.split('さん')[0].split(' - ')[0].split('－')[0].replace('SNSアカウント情報', '').replace('きれいなお姉さん無修正', '').replace('【', '').replace('】', '').strip()
-                    # 名前の中に(@handle)が残っている場合は削除
-                    name = re.sub(r'[(@（＠][a-zA-Z0-9_]+[)）]', '', name).strip()
+                    # 名前をクリーンアップ
+                    name = clean_name(title.split('さん')[0])
                     
                     # entry ID
                     entry_id_match = re.search(r'blog-entry-(\d+)', post_url)
@@ -96,8 +118,10 @@ def scrape_reinasex(category=1, max_pages=10, exclude_urls=None):
                             # サムネイル（s.jpg）をオリジナルに変換
                             orig_src = src.replace('s.jpg', '.jpg')
                             images.append(orig_src)
-                            if len(images) >= 5:
+                            if len(images) >= 12:
                                 break
+                    
+                    # 画像が少ない場合にBingで補強 (停止中)
                     
                     if name:
                         all_items.append({

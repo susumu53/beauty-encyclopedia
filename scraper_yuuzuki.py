@@ -4,6 +4,13 @@ import json
 import os
 import re
 
+def clean_name(name):
+    """名前から不要な括弧やIDを削除する"""
+    if not name: return ""
+    name = re.sub(r'[（(][^）)]+[)）]', '', name)
+    name = re.sub(r'[@＠][a-zA-Z0-9_]+', '', name)
+    return name.strip()
+
 def scrape_yuuzuki():
     url = "https://dougo-yuuzuki.jp/column_instaero/"
     headers = {
@@ -37,12 +44,11 @@ def scrape_yuuzuki():
             continue
             
         # 形式: 名前（handle）
-        match = re.search(r"（([^）]+)）", full_title)
+        name = clean_name(full_title)
         handle = ""
-        name = full_title
-        if match:
-            handle = match.group(1)
-            name = full_title.split("（")[0]
+        handle_match = re.search(r"（([^）]+)）|[\((]([^)]+)[\))]|[@＠]([a-zA-Z0-9_]+)", full_title)
+        if handle_match:
+            handle = handle_match.group(1) or handle_match.group(2) or handle_match.group(3)
             
         insta_url = ""
         images = []
@@ -73,6 +79,8 @@ def scrape_yuuzuki():
             curr = curr.find_next_sibling()
             
         if handle:
+            # Bing画像検索で画像を補強 (停止中)
+
             if not images:
                 images.append("https://dougo-yuuzuki.jp/wp-content/uploads/2024/06/インスタ.jpg")
                 
@@ -80,7 +88,7 @@ def scrape_yuuzuki():
                 "name": name,
                 "id": handle,
                 "insta": f"https://www.instagram.com/{handle}/",
-                "images": list(dict.fromkeys(images))[:5],
+                "images": list(dict.fromkeys(images))[:12],
                 "url": url,
                 "source": "yuuzuki",
                 "source_type": "priority"

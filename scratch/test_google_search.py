@@ -12,7 +12,8 @@ def test_search(query):
         'key': API_KEY,
         'cx': CX,
         'q': query,
-        'num': 3
+        'num': 3,
+        'searchType': 'image'
     }
     
     print(f"Searching for: {query}...")

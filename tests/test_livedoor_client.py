@@ -30,6 +30,7 @@ class TestLivedoorClient(unittest.TestCase):
         """post_articleが正しいXMLペイロードを送信するかテスト"""
         mock_response = MagicMock()
         mock_response.text = "success"
+        mock_response.status_code = 201
         mock_response.raise_for_status = MagicMock()
         mock_post.return_value = mock_response
 
@@ -44,7 +45,7 @@ class TestLivedoorClient(unittest.TestCase):
         
         # ペイロード（XML）の確認
         payload = kwargs['data'].decode('utf-8')
-        self.assertIn('<title>Sample Title</title>', payload)
+        self.assertIn('<title><![CDATA[Sample Title]]></title>', payload)
         self.assertIn('Sample Content', payload)
         self.assertIn('<![CDATA[', payload)
 
@@ -53,6 +54,7 @@ class TestLivedoorClient(unittest.TestCase):
         """categoryとdraftオプションが正しくXMLに反映されるかテスト"""
         mock_response = MagicMock()
         mock_response.text = "success"
+        mock_response.status_code = 201
         mock_response.raise_for_status = MagicMock()
         mock_post.return_value = mock_response
 

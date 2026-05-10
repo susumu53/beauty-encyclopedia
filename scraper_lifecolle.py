@@ -4,7 +4,6 @@ import json
 import os
 import re
 
-from scraper_image_search import search_bing_images
 
 def scrape_lifecolle():
     url = "https://www.lifecolle.com/instagram-bijyo/"
@@ -65,13 +64,7 @@ def scrape_lifecolle():
         if username:
             final_insta_url = insta_url if insta_url else profile_url
             
-            # Bing画像検索で画像を補強 (名前で検索)
-            # 画像が少ない場合に補強する
-            if len(images) < 12:
-                safe_name = name.encode('ascii', 'ignore').decode('ascii') or "Beauty"
-                print(f"Supplementing images for {safe_name} using Bing...")
-                bing_images = search_bing_images(f"{name} 高画質 ポートレート", limit=12 - len(images))
-                images.extend(bing_images)
+            # Bing画像検索で画像を補強 (停止中)
 
             if not images:
                 images.append(fallback_img)
