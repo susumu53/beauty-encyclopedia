@@ -81,8 +81,9 @@ def scrape_yuuzuki():
         if handle:
             # Bing画像検索で画像を補強 (停止中)
 
+            # 画像がない場合は空のままにする（または別の適切な処理）
             if not images:
-                images.append("https://dougo-yuuzuki.jp/wp-content/uploads/2024/06/インスタ.jpg")
+                pass
                 
             items.append({
                 "name": name,
