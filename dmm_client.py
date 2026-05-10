@@ -27,9 +27,9 @@ class DMMClient:
             if result.get("status") == 200:
                 for item in result.get("items", []):
                     items.append({
-                        "title": item.get("title"),
-                        "url":   item.get("affiliateURL"),
-                        "image": item.get("imageURL", {}).get("large")
+                        "title": item.get("title") or "",
+                        "url":   item.get("affiliateURL") or "",
+                        "image": (item.get("imageURL") or {}).get("large") or ""
                     })
             return items
         except Exception as e:
