@@ -37,6 +37,7 @@ ai_hongo_
 ai_mukaiav
 ai_uehara_ex
 aichaaaapi
+aiharamisaking
 airi_kijima
 airishimizu
 akagikuro
@@ -395,6 +396,7 @@ pia__nono
 picaruuu
 picooondayo
 pipipi_che
+pipipi_koma
 pixy_yxip
 piyo_na_ri_
 poison2mui
