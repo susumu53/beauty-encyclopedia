@@ -1070,3 +1070,5 @@
 2026-07-07 23:53:16.338159: Failed to post sae_okazaki: 400 Client Error: Bad Request for url: https://livedoor.blogcms.jp/atompub/ranking000-w6crxelo/article
 2026-07-08 02:06:36.741196: Failed to post yuu_pl: 400 Client Error: Bad Request for url: https://livedoor.blogcms.jp/atompub/ranking000-w6crxelo/article
 2026-07-08 02:06:39.522986: Failed to post sae_okazaki: 400 Client Error: Bad Request for url: https://livedoor.blogcms.jp/atompub/ranking000-w6crxelo/article
+2026-07-08 05:44:52.950951: Failed to post yuu_pl: 400 Client Error: Bad Request for url: https://livedoor.blogcms.jp/atompub/ranking000-w6crxelo/article
+2026-07-08 05:44:54.996745: Failed to post sae_okazaki: 400 Client Error: Bad Request for url: https://livedoor.blogcms.jp/atompub/ranking000-w6crxelo/article
