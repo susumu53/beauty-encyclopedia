@@ -236,6 +236,7 @@ hoshino_ume_
 hoshinomeii
 hotaru_komori
 hotaru_kusakabe
+hotarunogi
 hutaokurumineko
 huyu_bomb
 hzk0207
@@ -814,6 +815,7 @@ riri_nntmr
 risa_mitsui
 rissoft344
 rito_mbt
+ritsu_oxo
 ritu_3939
 riucos246817
 riyu__primo
